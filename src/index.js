@@ -1,13 +1,28 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+import Signin from './Frontend/Pages/Signin';
+import Dashboard from './Frontend/Pages/Dashboard';
+import Home from './Frontend/Pages/Home';
+import Task from './Frontend/Pages/Task';
 import reportWebVitals from './reportWebVitals';
+import WorkHistory from './Frontend/Pages/WorkHistory';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Signin />} />
+        <Route path="/dashboard" element={<Dashboard />}>
+          <Route index element={<Home />} />
+          <Route path="home" element={<Home />} />
+          <Route path="task" element={<Task />} />
+          <Route path="workhistory" element={<WorkHistory />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
 
