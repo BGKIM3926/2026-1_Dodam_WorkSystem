@@ -20,6 +20,7 @@ public class DSystemService {
         return repository.findAll().stream().map(entity -> {
             DSystemDto dto = new DSystemDto();
 
+            dto.setSystemID(entity.getSystemId());
             dto.setCustomerName(entity.getCustomerName());
             dto.setServiceName(entity.getServiceName());
             dto.setServiceNameMin(entity.getServiceNameMin());

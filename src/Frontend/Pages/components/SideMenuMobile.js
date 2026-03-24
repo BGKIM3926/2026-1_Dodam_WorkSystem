@@ -13,6 +13,8 @@ import CardAlert from './CardAlert';
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import OptionsMenu from './OptionsMenu';
+import { buildTree } from '../../Utils/buildTree';
+import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
 function SideMenuMobile({ open, toggleDrawer }) {
   const [user, setUser] = useState({
@@ -20,6 +22,18 @@ function SideMenuMobile({ open, toggleDrawer }) {
     name: '',
     role: '',
   });
+
+  const [treeData, setTreeData] = useState([]);
+  const { setSelectedNode } = useSelectedNode();
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/dsystem')
+      .then((res) => res.json())
+      .then((data) => {
+        const tree = buildTree(data);
+        setTreeData(tree);
+      });
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('loginUser');
@@ -72,7 +86,10 @@ function SideMenuMobile({ open, toggleDrawer }) {
         </Stack>
         <Divider />
         <Stack sx={{ flexGrow: 1 }}>
-          <MenuContent />
+          <MenuContent
+            treeData={treeData}
+            setSelectedNode={setSelectedNode}
+          />
           <Divider />
         </Stack>
         <Stack sx={{ p: 2 }}>

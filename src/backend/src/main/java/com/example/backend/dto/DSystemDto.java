@@ -7,6 +7,7 @@ import lombok.Setter;
 @Setter
 public class DSystemDto {
 
+    private Long systemID;
     private String customerName;
     private String serviceName;
     private String serviceNameMin;

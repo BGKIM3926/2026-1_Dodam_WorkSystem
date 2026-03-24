@@ -27,6 +27,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
 import Typography from '@mui/material/Typography';
+import { koKR } from '@mui/x-data-grid/locales';
 
 const StyledQuickFilter = styled(QuickFilter)({
     display: 'grid',
