@@ -12,9 +12,10 @@ export default function DynamicTreeMenu({ data, onSelect }) {
 
     return (
         <SimpleTreeView onSelectedItemsChange={(e, id) => onSelect(id)}>
-            <TreeItem itemId="root" label="이력 관리">
+            {/* <TreeItem itemId="root" label="이력 관리">
                 {renderTree(data)}
-            </TreeItem>
+            </TreeItem> */}
+            {renderTree(data)}
         </SimpleTreeView>
     );
 }

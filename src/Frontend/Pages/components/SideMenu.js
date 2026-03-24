@@ -8,6 +8,9 @@ import Typography from '@mui/material/Typography';
 import SelectContent from './SelectContent';
 import MenuContent from './MenuContent';
 import OptionsMenu from './OptionsMenu';
+import DynamicTreeMenu from './DynamicTreeMenu';
+import { buildTree } from '../../Utils/buildTree';
+import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
 import { useEffect, useState } from 'react';
 
@@ -30,6 +33,18 @@ export default function SideMenu() {
     name: '',
     role: '',
   });
+
+  const [treeData, setTreeData] = useState([]);
+  const { setSelectedNode } = useSelectedNode();
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/dsystem')
+      .then((res) => res.json())
+      .then((data) => {
+        const tree = buildTree(data);
+        setTreeData(tree);
+      });
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('loginUser');
@@ -85,7 +100,16 @@ export default function SideMenu() {
           flexDirection: 'column',
         }}
       >
-        <MenuContent />
+        {/* <Box sx={{ overflow: 'auto', height: '100%' }}>
+          <DynamicTreeMenu
+            data={treeData}
+            onSelect={(id) => setSelectedNode(id)}
+          />
+        </Box> */}
+        <MenuContent
+          treeData={treeData}
+          setSelectedNode={setSelectedNode}
+        />
         
       </Box>
       
