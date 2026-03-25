@@ -26,10 +26,13 @@ export default function WorkHistory() {
     }, [selectedNode]);
 
     return (
-        <Box>
-            <HistoryHeader selectedNode={selectedNode} rows={rows} />
-            <HistoryActions />
+        <>
+            <box>
+                <HistoryHeader selectedNode={selectedNode} rows={rows} />
+                <HistoryActions />
+            </box>
+
             <HistoryList rows={rows} />
-        </Box>
+        </>        
     );
 }

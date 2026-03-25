@@ -1,35 +1,33 @@
-import { Stack, Card, CardContent, Typography } from '@mui/material';
+import { Grid, Card, CardContent, Typography } from '@mui/material';
 
 export default function HistoryList({ rows }) {
     return (
-        <Stack spacing={2}>
+        <Grid container spacing={4} columns={16}>
             {rows.map((row) => (
-                <Card key={row.historyId}> {/* 🔥 key 수정 */}
-                    <CardContent>
+                <Grid item size={8} key={row.historyId}>
+                    <Card sx={{ height: '100%' }}>
+                        <CardContent>
 
-                        {/* 작업 유형 */}
-                        <Typography variant="subtitle1" fontWeight={600}>
-                            {row.workType}
-                        </Typography>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                {row.workType}
+                            </Typography>
 
-                        {/* 내용 */}
-                        <Typography variant="body2" color="text.secondary">
-                            {row.issue}
-                        </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                {row.issue}
+                            </Typography>
 
-                        {/* 담당자 */}
-                        <Typography variant="caption">
-                            👤 {row.workerId}
-                        </Typography>
+                            <Typography variant="caption">
+                                👤 {row.workerName}
+                            </Typography>
 
-                        {/* 장비 */}
-                        <Typography variant="caption" sx={{ ml: 2 }}>
-                            🖥 {row.equipment}
-                        </Typography>
+                            <Typography variant="caption" sx={{ ml: 2 }}>
+                                🖥 {row.equipment}
+                            </Typography>
 
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </Grid>
             ))}
-        </Stack>
+        </Grid>
     );
 }

@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.WorkHistoryResponseDto;
 import com.example.backend.entity.MaintenanceHistory;
 import com.example.backend.repository.WorkHistoryRepository;
 
@@ -16,12 +17,14 @@ public class WorkHistoryService {
         this.repository = repository;
     }
 
-    public List<MaintenanceHistory> getHistoryBySystem(Long systemId) {
-        return repository.findBySystemId(systemId);
+    public List<WorkHistoryResponseDto> getHistoryBySystem(Long systemId) {
+        return repository.findWithUserName(systemId);
     }
 
     public MaintenanceHistory create(MaintenanceHistory history) {
         return repository.save(history);
     }
+
+    
     
 }

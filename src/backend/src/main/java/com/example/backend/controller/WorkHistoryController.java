@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.service.WorkHistoryService;
+import com.example.backend.dto.WorkHistoryResponseDto;
 import com.example.backend.entity.MaintenanceHistory;
 
 import org.springframework.web.bind.annotation.*;
@@ -19,8 +20,7 @@ public class WorkHistoryController {
     }
 
     @GetMapping
-    public List<MaintenanceHistory> getHistory(
-            @RequestParam Long systemId) {
+    public List<WorkHistoryResponseDto> getHistory(@RequestParam Long systemId) {
         return service.getHistoryBySystem(systemId);
     }
 
