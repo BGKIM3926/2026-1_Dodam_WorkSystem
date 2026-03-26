@@ -2,14 +2,14 @@ import { Typography, Box } from '@mui/material';
 
 export default function HistoryHeader({ selectedNode, rows }) {
     return (
-        <Box sx={{ mb: 2 }}>
-            <Typography variant="h6">
+        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4 }}>
+            <Typography variant="h2" gutterBottom>
                 {selectedNode
                     ? `${selectedNode.region} / ${selectedNode.systemName}`
-                    : '유지보수 이력'}
+                    : '이력 관리'}
             </Typography>
 
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="h4" color="text.secondary">
                 총 {rows.length}건
             </Typography>
         </Box>

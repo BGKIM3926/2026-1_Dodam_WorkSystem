@@ -21,10 +21,24 @@ public class WorkHistoryService {
         return repository.findWithUserName(systemId);
     }
 
+    public List<WorkHistoryResponseDto> getAll() {
+        return repository.findAllWithUserName();
+    }
+
     public MaintenanceHistory create(MaintenanceHistory history) {
         return repository.save(history);
     }
 
-    
+    public MaintenanceHistory getById(Long id) {
+        return repository.findById(id).orElseThrow();
+    }
+
+    public MaintenanceHistory save(MaintenanceHistory history) {
+        return repository.save(history);
+    }
+
+    public void delete(Long id) {
+        repository.deleteById(id);
+    }
     
 }

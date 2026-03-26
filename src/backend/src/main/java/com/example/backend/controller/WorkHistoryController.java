@@ -24,9 +24,33 @@ public class WorkHistoryController {
         return service.getHistoryBySystem(systemId);
     }
 
+    @GetMapping("/all")
+    public List<WorkHistoryResponseDto> getAllHistory() {
+        return service.getAll();
+    }
+
     @PostMapping
     public MaintenanceHistory create(
             @RequestBody MaintenanceHistory history) {
         return service.create(history);
+    }
+
+    @PutMapping("/{id}")
+    public MaintenanceHistory update(
+            @PathVariable Long id,
+            @RequestBody MaintenanceHistory request) {
+
+        MaintenanceHistory history = service.getById(id);
+
+        history.setWorkType(request.getWorkType());
+        history.setIssue(request.getIssue());
+        history.setEquipment(request.getEquipment());
+
+        return service.save(history);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

@@ -8,6 +8,7 @@ import Home from './Frontend/Pages/Home';
 import Task from './Frontend/Pages/Task';
 import reportWebVitals from './reportWebVitals';
 import WorkHistory from './Frontend/Pages/WorkHistory';
+import CreateWorkHistory from './Frontend/Pages/components/CreateWorkHistory';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -20,6 +21,7 @@ root.render(
           <Route path="home" element={<Home />} />
           <Route path="task" element={<Task />} />
           <Route path="workhistory" element={<WorkHistory />} />
+          <Route path="workhistory/createWorkHistory" element={<CreateWorkHistory />} />
         </Route>
       </Routes>
     </BrowserRouter>

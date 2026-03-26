@@ -102,6 +102,7 @@ export default function MenuContent({ treeData }) {
         <ListItemButton
           selected={location.pathname.includes('workhistory')}
           onClick={() => {
+            setSelectedNode(null);
             navigate('/dashboard/workhistory');
           }}
           sx={{
@@ -143,7 +144,7 @@ export default function MenuContent({ treeData }) {
                   systemName: node.name,
                 });
 
-                navigate(`/dashboard/workhistory?systemId=${node.systemId}`); // 🔥 추가
+                navigate(`/dashboard/workhistory?systemId=${node.systemId}&region=${node.region}&systemName=${node.name}`); // 🔥 추가
               }}
               selectedNode={selectedNode}
             />

@@ -11,10 +11,14 @@ import OptionsMenu from './OptionsMenu';
 import DynamicTreeMenu from './DynamicTreeMenu';
 import { buildTree } from '../../Utils/buildTree';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
+import Button from '@mui/material/Button';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import { useNavigate } from 'react-router-dom';
 
 import { useEffect, useState } from 'react';
 
 const drawerWidth = 240;
+
 
 const Drawer = styled(MuiDrawer)({
   width: drawerWidth,
@@ -54,6 +58,13 @@ export default function SideMenu() {
     }
   }, []);
 
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('loginUser'); // 🔥 핵심
+    navigate('/');
+  };
+
   return (
     <Drawer
       variant="permanent"
@@ -76,7 +87,7 @@ export default function SideMenu() {
       >
         <Avatar
           sizes="small"
-          alt="Riley Carter"
+          alt={user.name}
           src="/static/images/avatar/7.jpg"
           sx={{ width: 36, height: 36 }}
         />
@@ -100,18 +111,19 @@ export default function SideMenu() {
           flexDirection: 'column',
         }}
       >
-        {/* <Box sx={{ overflow: 'auto', height: '100%' }}>
-          <DynamicTreeMenu
-            data={treeData}
-            onSelect={(id) => setSelectedNode(id)}
-          />
-        </Box> */}
         <MenuContent
           treeData={treeData}
           setSelectedNode={setSelectedNode}
         />
         
       </Box>
+
+
+      <Stack sx={{ p: 2 }}>
+        <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />} onClick={handleLogout}>
+          로그아웃
+        </Button>
+      </Stack>
       
     </Drawer>
   );

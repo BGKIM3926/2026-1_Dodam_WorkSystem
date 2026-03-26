@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import org.hibernate.annotations.CreationTimestamp;
+
 @Entity
 @Table(name = "maintenance_history")
 @Getter
@@ -18,7 +21,9 @@ public class MaintenanceHistory {
 
     private String region;
 
-    // private LocalDate visitDate;
+    @CreationTimestamp
+    @Column(name = "visit_date", updatable = false)
+    private LocalDate visitDate;
 
     private String workerId;
 
@@ -36,6 +41,4 @@ public class MaintenanceHistory {
     private String equipment;
 
     private String createdBy;
-
-   // private LocalDateTime createdAt;
 }

@@ -14,6 +14,8 @@ import {
   treeViewCustomizations,
 } from './theme/customizations';
 import { SelectedNodeProvider } from '../Contexts/SelectedNodeContext';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -23,6 +25,16 @@ const xThemeComponents = {
 };
 
 export default function Dashboard(props) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+      const user = localStorage.getItem('loginUser');
+      
+      if (!user) {
+          navigate('/');
+      }
+  }, []);
+
   return (
     <SelectedNodeProvider>
       <AppTheme {...props} themeComponents={xThemeComponents}>
@@ -50,7 +62,7 @@ export default function Dashboard(props) {
                 mt: { xs: 8, md: 0 },
               }}
             >
-              <Header />
+              {/* <Header /> */}
               <Outlet />
             </Stack>
           </Box>
