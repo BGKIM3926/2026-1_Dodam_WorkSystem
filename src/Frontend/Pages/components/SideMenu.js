@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useEffect, useState } from 'react';
 
+
 const drawerWidth = 240;
 
 
@@ -93,14 +94,14 @@ export default function SideMenu() {
         />
         <Box sx={{ mr: 'auto' }}>
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {user.name}
+            {user.name}님 환영합니다.
           </Typography>
 
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {user.role}
           </Typography>
         </Box>
-        <OptionsMenu />
+        {/* <OptionsMenu /> */}
       </Stack>
       <Divider />
       <Box

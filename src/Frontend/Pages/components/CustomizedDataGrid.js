@@ -1,50 +1,49 @@
 import { DataGrid } from '@mui/x-data-grid'
-import { columns } from '../internals/data/gridData';
 import { useEffect, useState } from 'react';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
+
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import Typography from '@mui/material/Typography';
 import { Divider, useMediaQuery } from '@mui/material';
+
 import { koKR } from '@mui/x-data-grid/locales';
+
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 
+// 🔥 추가
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
 export default function CustomizedDataGrid() {
-  const [rows, setRows] = useState([]); 
-  const [loading, setLoading] = useState(true); 
-  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [expandedRow, setExpandedRow] = useState(null);
-  const [rawRows, setRawRows] = useState([]);
-  const [expandedRowIds, setExpandedRowIds] = useState([]);
   const { selectedNode } = useSelectedNode();
 
   const [selectedRow, setSelectedRow] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [accountData, setAccountData] = useState([]);
   const [loadingAccount, setLoadingAccount] = useState(false);
+
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  // const filteredRows = rows.filter((row) => {
-  //   if (!selectedNode) return true;
+  // 🔥 추가 (핵심)
+  const [customerFilter, setCustomerFilter] = useState('');
 
-  //   const [customer, service] = selectedNode.split('-');
+  // 🔥 고객명 목록 생성
+  const customerList = [...new Set(rows.map(r => r.customerName))];
 
-  //   if (service) {
-  //     return (
-  //       row.customerName === customer &&
-  //       row.serviceNameMin === service
-  //     );
-  //   }
-
-  //   return row.customerName === customer;
-  // });
+  // 🔥 필터링된 rows
+  const filteredRows = rows.filter((row) => {
+    if (!customerFilter) return true;
+    return row.customerName === customerFilter;
+  });
 
   const handleRowClick = async (params) => {
     const systemId = params.row.systemID;
@@ -68,8 +67,35 @@ export default function CustomizedDataGrid() {
     }
   };
 
+  // 🔥 핵심: customerName 컬럼만 dropdown 적용
   const visibleColumns = [
-    { field: 'customerName', headerName: '고객명', flex: 1 },
+    {
+      field: 'customerName',
+      headerName: '고객명',
+      flex: 1,
+
+      renderHeader: () => (
+        <FormControl size="small" fullWidth>
+          <Select
+            value={customerFilter}
+            displayEmpty
+            onChange={(e) => setCustomerFilter(e.target.value)}
+            sx={{ fontSize: 14 }}
+          >
+            <MenuItem value="">
+              <em>고객명</em>
+            </MenuItem>
+
+            {customerList.map((customer) => (
+              <MenuItem key={customer} value={customer}>
+                {customer}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ),
+    },
+
     { field: 'serviceNameMin', headerName: '서비스명', flex: 1 },
     { field: 'systemNameMin', headerName: '시스템명', flex: 1 },
     { field: 'hardwareName', headerName: '하드웨어', flex: 1 },
@@ -97,11 +123,9 @@ export default function CustomizedDataGrid() {
   ];
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/dsystem') // 👉 백엔드 API
+    fetch('http://localhost:8080/api/dsystem')
       .then((res) => res.json())
       .then((data) => {
-        console.log(data);
-        console.log(rows);
         const mapped = data.map((item, index) => ({
           id: index,
           ...item
@@ -111,10 +135,11 @@ export default function CustomizedDataGrid() {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+
   return (
     <>
       <DataGrid
-        rows={rows}
+        rows={filteredRows}   // 🔥 변경됨
         columns={isMobile ? mobileColumns : visibleColumns}
         localeText={koKR.components.MuiDataGrid.defaultProps.localeText}
         onRowClick={handleRowClick}
@@ -126,55 +151,32 @@ export default function CustomizedDataGrid() {
         }}
         pageSizeOptions={[10, 20, 50]}
         disableColumnResize
+        disableColumnFilter   // 🔥 기본 필터 제거
         density="compact"
-        slotProps={{
-          filterPanel: {
-            filterFormProps: {
-              logicOperatorInputProps: {
-                variant: 'outlined',
-                size: 'small',
-              },
-              columnInputProps: {
-                variant: 'outlined',
-                size: 'small',
-                sx: { mt: 'auto' },
-              },
-              operatorInputProps: {
-                variant: 'outlined',
-                size: 'small',
-                sx: { mt: 'auto' },
-              },
-              valueInputProps: {
-                InputComponentProps: {
-                  variant: 'outlined',
-                  size: 'small',
-                },
-              },
-            },
-          },
-        }}
       />
-      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth>
 
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth>
         <DialogContent>
           {selectedRow && (
             <>
               <Typography>
                 <strong>하드웨어 정보</strong>
                 <br />
-                 {selectedRow.hardwareInfo}
+                {selectedRow.hardwareInfo}
               </Typography>
               <br />
               <Typography>
-                <strong>OS 정보</strong> 
+                <strong>OS 정보</strong>
                 <br />
                 {selectedRow.osInfo}
               </Typography>
             </>
           )}
+
           <br />
           <Divider />
           <br />
+
           {loadingAccount ? (
             <Typography>로딩 중...</Typography>
           ) : (
@@ -188,7 +190,7 @@ export default function CustomizedDataGrid() {
                   <TableCell>패스워드</TableCell>
                 </TableRow>
               </TableHead>
-              
+
               <TableBody>
                 {accountData.map((row, idx) => (
                   <TableRow key={idx}>
@@ -205,7 +207,5 @@ export default function CustomizedDataGrid() {
         </DialogContent>
       </Dialog>
     </>
-    
-    
   );
 }

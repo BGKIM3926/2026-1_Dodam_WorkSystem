@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useSelectedNode } from '../Contexts/SelectedNodeContext';
 import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
+import dayjs from 'dayjs';
 
 
 export default function WorkHistory() {
@@ -13,19 +14,33 @@ export default function WorkHistory() {
     const { selectedNode } = useSelectedNode();
     const navigate = useNavigate();
     const [filter, setFilter] = useState('전체');
-    const isGlobalView = !selectedNode?.systemId;
+    const isGlobalView = !selectedNode?.serviceName;
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
 
-    const filteredRows =
-        filter === '전체'
-            ? rows
-            : rows.filter(row => row.workType === filter);
+    const filteredRows = rows.filter(row => {
+        // 1. workType 필터
+        const matchType =
+            filter === '전체' || row.workType === filter;
+
+        // 2. 날짜 필터 (visitDate 없으면 통과)
+        const rowDate = row.visitDate ? dayjs(row.visitDate) : null;
+
+        const matchStart =
+            !startDate || (rowDate && rowDate.isAfter(startDate.subtract(1, 'day')));
+
+        const matchEnd =
+            !endDate || (rowDate && rowDate.isBefore(endDate.add(1, 'day')));
+
+        return matchType && matchStart && matchEnd;
+    });
 
     useEffect(() => {
         console.log('selectedNode:', selectedNode);
 
         // 트리 구조에서 선택했다면 기존 방식
-        if (selectedNode?.systemId) {
-            fetch(`http://localhost:8080/api/history?systemId=${selectedNode.systemId}`)
+        if (selectedNode?.serviceName) {
+            fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
                 .then(res => res.json())
                 .then(data => setRows(data))
                 .catch(err => console.error(err));
@@ -55,7 +70,14 @@ export default function WorkHistory() {
                 component="main"
                 sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2 }}>
                 <HistoryHeader selectedNode={selectedNode} rows={rows} />
-                <HistoryActions filter={filter} setFilter={setFilter} isGlobalView={isGlobalView} />
+                <HistoryActions 
+                    filter={filter} 
+                    setFilter={setFilter} 
+                    isGlobalView={isGlobalView} 
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate} />
                 <HistoryList rows={filteredRows} isGlobalView={isGlobalView} />
             </Container>
 

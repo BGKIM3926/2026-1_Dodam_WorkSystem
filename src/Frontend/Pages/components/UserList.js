@@ -1,0 +1,153 @@
+import {
+    Grid,
+    Card,
+    CardContent,
+    Typography,
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    TextField,
+    Box,
+    MenuItem
+} from '@mui/material';
+
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+import { useState } from 'react';
+
+export default function UsersList({ rows, fetchUsers }) {
+    const [openEdit, setOpenEdit] = useState(false);
+    const [openDelete, setOpenDelete] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
+    const [form, setForm] = useState({});
+
+    // 🔥 수정
+    const handleUpdate = async () => {
+        await fetch(`http://localhost:8080/api/users/${selectedRow.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form)
+        });
+
+        setOpenEdit(false);
+        fetchUsers();
+    };
+
+    // 🔥 삭제
+    const handleDelete = async () => {
+        await fetch(`http://localhost:8080/api/users/${selectedRow.id}`, {
+            method: 'DELETE'
+        });
+
+        setOpenDelete(false);
+        fetchUsers();
+    };
+
+    return (
+        <Grid container spacing={4} columns={16}>
+            {rows.map((row) => (
+                <Grid size={8} key={row.id}>
+                    <Card sx={{ position: 'relative', height: '100%' }}>
+                        <CardContent>
+
+                            {/* 🔥 우측 버튼 */}
+                            <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
+                                <IconButton onClick={() => {
+                                    setSelectedRow(row);
+                                    setForm({ ...row, password: '' });
+                                    setOpenEdit(true);
+                                }}>
+                                    <EditIcon />
+                                </IconButton>
+
+                                <IconButton onClick={() => {
+                                    setSelectedRow(row);
+                                    setOpenDelete(true);
+                                }}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </Box>
+
+                            {/* 🔥 카드 내용 */}
+                            <Typography variant="h6">{row.name}</Typography>
+
+                            <Typography variant="body2" color="text.secondary">
+                                ID: {row.id}
+                            </Typography>
+
+                            <Typography variant="body2">
+                                Role: {row.role}
+                            </Typography>
+
+                        </CardContent>
+                    </Card>
+                </Grid>
+            ))}
+
+            {/* 🔥 수정 Dialog */}
+            <Dialog open={openEdit} onClose={() => setOpenEdit(false)}>
+                <DialogTitle>사용자 수정</DialogTitle>
+
+                <DialogContent>
+                    <TextField
+                        fullWidth
+                        margin="dense"
+                        label="이름"
+                        value={form.name || ''}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
+
+                    <TextField
+                        fullWidth
+                        margin="dense"
+                        label="비밀번호"
+                        type="password"
+                        value={form.password || ''}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        helperText="비워두면 변경되지 않음"
+                    />
+
+                    <TextField
+                        select
+                        fullWidth
+                        margin="dense"
+                        label="권한"
+                        value={form.role || ''}
+                        onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    >
+                        <MenuItem value="MANAGER">관리자</MenuItem>
+                        <MenuItem value="MANAGER2">팀장</MenuItem>
+                        <MenuItem value="USER">일반사용자</MenuItem>
+                    </TextField>
+                </DialogContent>
+
+                <DialogActions>
+                    <Button onClick={() => setOpenEdit(false)}>취소</Button>
+                    <Button variant="contained" onClick={handleUpdate}>
+                        수정
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* 🔥 삭제 Dialog */}
+            <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
+                <DialogTitle>삭제 확인</DialogTitle>
+
+                <DialogContent>
+                    정말 삭제하시겠습니까?
+                </DialogContent>
+
+                <DialogActions>
+                    <Button onClick={() => setOpenDelete(false)}>취소</Button>
+                    <Button color="error" variant="contained" onClick={handleDelete}>
+                        삭제
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Grid>
+    );
+}

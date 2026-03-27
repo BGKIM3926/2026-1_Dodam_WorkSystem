@@ -20,8 +20,8 @@ public class WorkHistoryController {
     }
 
     @GetMapping
-    public List<WorkHistoryResponseDto> getHistory(@RequestParam Long systemId) {
-        return service.getHistoryBySystem(systemId);
+    public List<WorkHistoryResponseDto> getHistory(@RequestParam String serviceName) {
+        return service.getHistoryByService(serviceName);
     }
 
     @GetMapping("/all")

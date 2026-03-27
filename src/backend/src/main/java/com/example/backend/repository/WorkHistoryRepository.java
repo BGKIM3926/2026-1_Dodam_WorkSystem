@@ -28,9 +28,9 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                 FROM MaintenanceHistory m
                 JOIN User u ON m.workerId = u.id
                 JOIN DSystem d ON m.systemId = d.systemId
-                WHERE m.systemId = :systemId
+                WHERE d.serviceNameMin = :serviceName
             """)
-    List<WorkHistoryResponseDto> findWithUserName(Long systemId);
+    List<WorkHistoryResponseDto> findWithUserName(String serviceName);
 
     @Query("""
                 SELECT new com.example.backend.dto.WorkHistoryResponseDto(

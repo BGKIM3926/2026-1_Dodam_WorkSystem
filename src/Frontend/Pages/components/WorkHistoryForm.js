@@ -11,10 +11,10 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 
-export default function WorkHistoryForm({ form, setForm, onSubmit }) {
+export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
     const navigate = useNavigate();
 
-    const workTypeOptions = ['신규구축', '장애', '유지보수', '기타'];
+    const workTypeOptions = ['정기점검', '장애조치', '기술지원', '구축'];
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -26,6 +26,28 @@ export default function WorkHistoryForm({ form, setForm, onSubmit }) {
 
             {/* 🔥 입력 영역 (한 줄) */}
             <Grid container spacing={2} alignItems="center">
+
+                <Grid item xs={12} md={3}>
+                    <FormControl fullWidth size="small">
+                        <Select
+                            value={form.systemId || ''}
+                            displayEmpty
+                            onChange={(e) =>
+                                setForm({ ...form, systemId: e.target.value })
+                            }
+                        >
+                            <MenuItem value="" disabled>
+                                시스템 선택
+                            </MenuItem>
+
+                            {systems.map((sys) => (
+                                <MenuItem key={sys.systemId} value={sys.systemID}>
+                                    {sys.systemNameMin}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Grid>
 
                 {/* 작업 유형 */}
                 <Grid item xs={12} md={2}>

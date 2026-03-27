@@ -35,4 +35,28 @@ public class DSystemService {
             return dto;
         }).toList();
     }
+
+    public List<DSystemDto> getByService(String serviceName, String customerName) {
+        return repository
+                .findByServiceNameMinAndCustomerName(serviceName, customerName)
+                .stream()
+                .map(entity -> {
+                    DSystemDto dto = new DSystemDto();
+
+                    dto.setSystemID(entity.getSystemId());
+                    dto.setCustomerName(entity.getCustomerName());
+                    dto.setServiceName(entity.getServiceName());
+                    dto.setServiceNameMin(entity.getServiceNameMin());
+                    dto.setSystemName(entity.getSystemName());
+                    dto.setSystemNameMin(entity.getSystemNameMin());
+                    dto.setHardwareName(entity.getHardwareName());
+                    dto.setHardwareInfo(entity.getHardwareInfo());
+                    dto.setOsName(entity.getOsName());
+                    dto.setOsIp(entity.getOsIp());
+                    dto.setOsInfo(entity.getOsInfo());
+
+                    return dto;
+                })
+                .toList();
+    }
 }

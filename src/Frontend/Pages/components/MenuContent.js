@@ -22,6 +22,7 @@ import DynamicTreeMenu from './DynamicTreeMenu';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
+import { Divider } from '@mui/material';
 
 
 
@@ -62,6 +63,36 @@ export default function MenuContent({ treeData }) {
           <HomeRoundedIcon />
         </ListItemIcon>
         <ListItemText primary="홈" />
+      </ListItemButton>
+
+      <ListItemButton
+        selected={location.pathname.includes('users')}
+        onClick={() => navigate('/dashboard/users')}
+        sx={{
+          borderRadius: 2,
+          px: 2,
+          py: 1.2,
+          gap: 1.5,
+
+          '& .MuiListItemIcon-root': {
+            minWidth: 0,
+            color: 'text.secondary',
+          },
+
+          '&.Mui-selected': {
+            backgroundColor: 'primary.main',
+            color: 'white',
+
+            '& .MuiListItemIcon-root': {
+              color: 'white',
+            },
+          },
+        }}
+      >
+        <ListItemIcon>
+          <PeopleRoundedIcon />
+        </ListItemIcon>
+        <ListItemText primary="인사 관리" />
       </ListItemButton>
 
       <ListItemButton
@@ -139,18 +170,18 @@ export default function MenuContent({ treeData }) {
               data={treeData}
               onSelect={(node) => {
                 setSelectedNode({
-                  systemId: node.systemId,
-                  region: node.region,
-                  systemName: node.name,
+                  serviceName: node.serviceName,
+                  customerName: node.customerName
                 });
 
-                navigate(`/dashboard/workhistory?systemId=${node.systemId}&region=${node.region}&systemName=${node.name}`); // 🔥 추가
+                navigate(`/dashboard/workhistory?customerName=${node.customerName}&serviceName=${node.serviceName}`);
               }}
               selectedNode={selectedNode}
             />
           </Box>
         </Collapse>
       </Box>
+      
       
     </List>
   );

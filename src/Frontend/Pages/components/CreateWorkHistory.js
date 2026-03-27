@@ -18,29 +18,43 @@ export default function CreateWorkHistory() {
     });
 
     const location = useLocation();
-    const params = new URLSearchParams(location.search);
+    const systemId = selectedNode?.systemId;
+    const serviceName = selectedNode?.serviceName;
+    const customerName = selectedNode?.customerName;
+    const [systems, setSystems] = useState([]);
+    
+    useEffect(() => {
+        if (!serviceName) return;
 
-    const systemId = params.get('systemId');
-    const region = params.get('region');
-    const systemName = params.get('systemName');
+        fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
+            .then(res => res.json())
+            .then(data => setSystems(data))
+            .catch(err => console.error(err));
+
+    }, [serviceName]);
 
     useEffect(() => {
-        if (!systemId) {
+        if (!serviceName) {
             alert('잘못된 접근입니다.');
             navigate('/dashboard/workhistory');
         }
     }, []);
 
     const handleSubmit = async () => {
+        if (!form.systemId) {
+            alert('시스템을 선택하세요');
+            return;
+        }
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
 
         const body = {
             ...form,
-            systemId: Number(systemId),
-            region,
-            workerId: user?.id || '',
-            createdBy: user?.id || ''
+            systemId: Number(form.systemId),
+            region: customerName,
+            serviceName: serviceName,
+            workerId: user.id,
+            createdBy: user.id
         };
 
         console.log('systemId:', systemId);
@@ -67,6 +81,7 @@ export default function CreateWorkHistory() {
                 form={form}
                 setForm={setForm}
                 onSubmit={handleSubmit}
+                systems={systems}
             />
         </Box>
     );

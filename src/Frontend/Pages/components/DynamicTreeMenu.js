@@ -27,7 +27,7 @@ export default function DynamicTreeMenu({ data, onSelect, selectedNode }) {
                     console.log(node);
                     e.stopPropagation();
 
-                    if (!node.systemId) return; // 부모 클릭 방지
+                    if (!node.serviceName) return; // 부모 클릭 방지
 
                     onSelect(node);
                 }}

@@ -17,8 +17,8 @@ public class WorkHistoryService {
         this.repository = repository;
     }
 
-    public List<WorkHistoryResponseDto> getHistoryBySystem(Long systemId) {
-        return repository.findWithUserName(systemId);
+    public List<WorkHistoryResponseDto> getHistoryByService(String serviceName) {
+        return repository.findWithUserName(serviceName);
     }
 
     public List<WorkHistoryResponseDto> getAll() {

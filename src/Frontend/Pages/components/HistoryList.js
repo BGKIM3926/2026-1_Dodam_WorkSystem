@@ -56,7 +56,7 @@ export default function HistoryList({ rows, isGlobalView }) {
                     <Card sx={{ position: 'relative', height: '100%' }}>
                         <CardContent>
                             {!isGlobalView && (
-                                <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+                                <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
                                     <IconButton onClick={() => {
                                         setSelectedRow(row);
                                         setForm(row);
@@ -113,9 +113,9 @@ export default function HistoryList({ rows, isGlobalView }) {
                             }
                         >
                             <MenuItem value="정기점검">정기점검</MenuItem>
-                            <MenuItem value="장애">장애</MenuItem>
-                            <MenuItem value="유지보수">유지보수</MenuItem>
-                            <MenuItem value="신규구축">신규구축</MenuItem>
+                            <MenuItem value="장애조치">장애조치</MenuItem>
+                            <MenuItem value="기술지원">기술지원</MenuItem>
+                            <MenuItem value="구축">구축</MenuItem>
                         </Select>
                     </FormControl>
 
