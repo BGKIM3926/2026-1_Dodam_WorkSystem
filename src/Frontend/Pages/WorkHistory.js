@@ -66,9 +66,9 @@ export default function WorkHistory() {
     return (
         <>
             <Container
-                maxWidth="lg"
+                //maxWidth="lg"
                 component="main"
-                sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2 }}>
+                sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch' }}>
                 <HistoryHeader selectedNode={selectedNode} rows={rows} />
                 <HistoryActions 
                     filter={filter} 

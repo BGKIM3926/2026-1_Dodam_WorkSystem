@@ -76,7 +76,7 @@ export default function CreateWorkHistory() {
     };
 
     return (
-        <Box sx={{ maxWidth: 700, mx: 'auto', mt: 3}}>
+        <Box sx={{ width: '100%', mx: 'auto', mt: 3}}>
             <WorkHistoryForm
                 form={form}
                 setForm={setForm}

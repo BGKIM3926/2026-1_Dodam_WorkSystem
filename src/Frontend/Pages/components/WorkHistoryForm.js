@@ -1,15 +1,155 @@
 import {
     Box,
-    Grid,
     TextField,
     Button,
     FormControl,
     Select,
     MenuItem,
-    Typography
+    Typography,
+    Stack,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
+
+const styles = {
+    container: {
+        width: '100%',
+        maxWidth: '700px',
+        mx: 'auto',
+        px: 2,
+        py: 4,
+    },
+    titleSection: {
+        mb: 4,
+    },
+    title: {
+        fontSize: '32px',
+        fontWeight: 600,
+        color: '#18181b',
+        mb: 1,
+    },
+    subtitle: {
+        fontSize: '14px',
+        fontWeight: 400,
+        color: '#71717a',
+    },
+    formSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px',
+    },
+    fieldLabel: {
+        fontSize: '14px',
+        fontWeight: 600,
+        color: '#18181b',
+        mb: 1,
+        letterSpacing: '0.5px',
+    },
+    fieldInput: {
+        '& .MuiOutlinedInput-root': {
+            height: '44px',
+            fontSize: '15px',
+            borderRadius: '8px',
+            border: '1.5px solid #e4e4e7',
+            '&:hover': {
+                borderColor: '#d4d4d8',
+            },
+            '&.Mui-focused': {
+                borderColor: '#2563eb',
+                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
+            },
+        },
+        '& .MuiOutlinedInput-input': {
+            padding: '12px',
+            color: '#18181b',
+            '&::placeholder': {
+                color: '#a1a1aa',
+                opacity: 1,
+            },
+        },
+    },
+    textareaInput: {
+        '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+            border: '1.5px solid #e4e4e7',
+            fontSize: '15px',
+            minHeight: '420px',
+            '&:hover': {
+                borderColor: '#d4d4d8',
+            },
+            '&.Mui-focused': {
+                borderColor: '#2563eb',
+                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
+            },
+        },
+        '& .MuiOutlinedInput-input': {
+            padding: '12px',
+            color: '#18181b',
+            lineHeight: '1.5',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            '&::placeholder': {
+                color: '#a1a1aa',
+                opacity: 1,
+            },
+        },
+    },
+    selectInput: {
+        '& .MuiOutlinedInput-root': {
+            height: '44px',
+            borderRadius: '8px',
+            border: '1.5px solid #e4e4e7',
+            fontSize: '15px',
+            '&:hover': {
+                borderColor: '#d4d4d8',
+            },
+            '&.Mui-focused': {
+                borderColor: '#2563eb',
+                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
+            },
+        },
+        '& .MuiOutlinedInput-input': {
+            padding: '12px',
+            color: '#18181b',
+        },
+    },
+    buttonSection: {
+        display: 'flex',
+        gap: '12px',
+        justifyContent: 'space-between',
+        mt: 5,
+    },
+    backButton: {
+        width: '140px',
+        height: '44px',
+        borderRadius: '8px',
+        border: '1.5px solid #e4e4e7',
+        color: '#18181b',
+        fontWeight: 600,
+        fontSize: '14px',
+        textTransform: 'none',
+        '&:hover': {
+            borderColor: '#d4d4d8',
+            backgroundColor: '#fafafa',
+        },
+    },
+    submitButton: {
+        width: '140px',
+        height: '44px',
+        borderRadius: '8px',
+        backgroundColor: '#2563eb',
+        color: '#ffffff',
+        fontWeight: 600,
+        fontSize: '14px',
+        textTransform: 'none',
+        '&:hover': {
+            backgroundColor: '#1d4ed8',
+        },
+        '&:active': {
+            backgroundColor: '#1e40af',
+        },
+    },
+};
 
 export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
     const navigate = useNavigate();
@@ -17,24 +157,26 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
     const workTypeOptions = ['정기점검', '장애조치', '기술지원', '구축'];
 
     return (
-        <Box sx={{ width: '100%' }}>
+        <Box sx={styles.container} component="form" noValidate autoComplete="off">
+            {/* 제목 영역 */}
+            <Box sx={styles.titleSection}>
+                <Typography sx={styles.title}>이력 등록</Typography>
+                <Typography sx={styles.subtitle}>새 작업 기록을 등록합니다</Typography>
+            </Box>
 
-            {/* 제목 */}
-            <Typography variant="h6" sx={{ mb: 2 }}>
-                이력 등록
-            </Typography>
-
-            {/* 🔥 입력 영역 (한 줄) */}
-            <Grid container spacing={2} alignItems="center">
-
-                <Grid item xs={12} md={3}>
-                    <FormControl fullWidth size="small">
+            {/* 입력 폼 영역 */}
+            <Box sx={styles.formSection}>
+                {/* 시스템 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>시스템</Typography>
+                    <FormControl fullWidth>
                         <Select
                             value={form.systemId || ''}
                             displayEmpty
                             onChange={(e) =>
                                 setForm({ ...form, systemId: e.target.value })
                             }
+                            sx={styles.selectInput}
                         >
                             <MenuItem value="" disabled>
                                 시스템 선택
@@ -47,20 +189,22 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
                             ))}
                         </Select>
                     </FormControl>
-                </Grid>
+                </Box>
 
                 {/* 작업 유형 */}
-                <Grid item xs={12} md={2}>
-                    <FormControl fullWidth size="small">
+                <Box>
+                    <Typography sx={styles.fieldLabel}>작업 유형</Typography>
+                    <FormControl fullWidth>
                         <Select
                             value={form.workType || ''}
                             displayEmpty
                             onChange={(e) =>
                                 setForm({ ...form, workType: e.target.value })
                             }
+                            sx={styles.selectInput}
                         >
                             <MenuItem value="" disabled>
-                                작업유형
+                                작업유형 선택
                             </MenuItem>
                             {workTypeOptions.map((type) => (
                                 <MenuItem key={type} value={type}>
@@ -69,56 +213,54 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
                             ))}
                         </Select>
                     </FormControl>
-                </Grid>
+                </Box>
 
                 {/* 장비 */}
-                <Grid item xs={12} md={4}>
+                <Box>
+                    <Typography sx={styles.fieldLabel}>장비</Typography>
                     <TextField
                         fullWidth
-                        size="small"
-                        placeholder="장비"
+                        placeholder="장비명을 입력하세요"
                         value={form.equipment || ''}
                         onChange={(e) =>
                             setForm({ ...form, equipment: e.target.value })
                         }
+                        sx={styles.fieldInput}
                     />
-                </Grid>
+                </Box>
 
                 {/* 내용 */}
-                <Grid item xs={12} md={4}>
+                <Box>
+                    <Typography sx={styles.fieldLabel}>내용</Typography>
                     <TextField
                         fullWidth
-                        size="small"
-                        placeholder="내용"
+                        placeholder="작업 내용을 자세히 입력하세요"
+                        multiline
+                        minRows={15}
+                        maxRows={Infinity}
                         value={form.issue || ''}
                         onChange={(e) =>
                             setForm({ ...form, issue: e.target.value })
                         }
+                        sx={styles.textareaInput}
                     />
-                </Grid>
+                </Box>
+            </Box>
 
-            </Grid>
-
-            {/* 🔥 버튼 영역 */}
-            <Box
-                sx={{
-                    mt: 3,
-                    display: 'flex',
-                    justifyContent: 'space-between'
-                }}
-            >
+            {/* 버튼 영역 */}
+            <Stack direction="row" sx={styles.buttonSection}>
                 <Button
-                    variant="outlined"
                     startIcon={<ArrowBackIcon />}
                     onClick={() => navigate('/dashboard/workhistory')}
+                    sx={styles.backButton}
                 >
                     뒤로가기
                 </Button>
 
-                <Button variant="contained" onClick={onSubmit}>
+                <Button onClick={onSubmit} sx={styles.submitButton}>
                     등록
                 </Button>
-            </Box>
+            </Stack>
         </Box>
     );
 }

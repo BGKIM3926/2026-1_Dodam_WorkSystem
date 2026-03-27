@@ -11,8 +11,8 @@ export default function MainGrid() {
     <Box sx={{ width: '100%' }}>
       {/* cards */}
       
-      <Typography component="h2" variant="h6" sx={{ mb: 2, mt: 4 }}>
-        Details
+      <Typography component="h2" variant="h2" sx={{ mb: 2, mt: 4 }}>
+        고객 정보
       </Typography>
       <Grid container spacing={2} columns={12}>
         <Grid size={{ xs: 12 }}>
