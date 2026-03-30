@@ -1,14 +1,14 @@
 package com.example.backend.service;
 
-import com.example.backend.entity.User;
-import com.example.backend.repository.UserRepository;
-import com.example.backend.dto.UserRequestDto;
-import com.example.backend.dto.UserResponseDto;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.example.backend.dto.UserRequestDto;
+import com.example.backend.dto.UserResponseDto;
+import com.example.backend.entity.User;
+import com.example.backend.repository.UserRepository;
 
 @Service
 public class UserService {
@@ -32,6 +32,15 @@ public class UserService {
 
     // 🔹 추가
     public void createUser(UserRequestDto dto) {
+        if (userRepository.existsById(dto.getId())) {
+            throw new RuntimeException("이미 존재하는 ID입니다");
+        }
+
+        List<String> validRoles = List.of("일반사용자", "관리자", "팀장");
+        if (dto.getRole() == null || !validRoles.contains(dto.getRole())) {
+            throw new IllegalArgumentException("유효하지 않은 role 값입니다. 허용: " + validRoles);
+        }
+
         User user = new User();
         user.setId(dto.getId());
         user.setPassword(dto.getPassword());

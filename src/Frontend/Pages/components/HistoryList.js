@@ -1,24 +1,24 @@
 import {
-    Grid,
+    Box,
+    Button,
     Card,
     CardContent,
-    Typography,
-    IconButton,
     Dialog,
-    DialogTitle,
-    DialogContent,
     DialogActions,
-    Button,
-    TextField,
-    Box,
+    DialogContent,
+    DialogTitle,
     FormControl,
+    Grid,
+    IconButton,
     InputLabel,
+    MenuItem,
     Select,
-    MenuItem
+    TextField,
+    Typography
 } from '@mui/material';
 
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 
 import { useState } from 'react';
 
@@ -50,9 +50,9 @@ export default function HistoryList({ rows, isGlobalView }) {
     };
 
     return (
-        <Grid container spacing={4} columns={16}>
+        <Grid container spacing={4} columns={16} sx={{ justifyContent: 'flex-start' }}>
             {rows.map((row) => (
-                <Grid size={8} key={row.historyId}>
+                <Grid size={{ xs: 16, sm: 16, md: 8 }} key={row.historyId}>
                     <Card sx={{ position: 'relative', height: '100%' }}>
                         <CardContent>
                             {!isGlobalView && (

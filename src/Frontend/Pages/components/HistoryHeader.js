@@ -1,8 +1,8 @@
-import { Typography, Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 export default function HistoryHeader({ selectedNode, rows }) {
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4, justifyContent: 'flex-start' }}>
             <Typography variant="h2" gutterBottom>
                 {selectedNode
                     ? `${selectedNode.customerName} / ${selectedNode.serviceName}`

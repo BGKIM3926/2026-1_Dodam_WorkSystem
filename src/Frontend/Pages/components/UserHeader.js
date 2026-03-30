@@ -1,6 +1,6 @@
-import { Typography, Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
-export default function UserHeader({ selectedNode, rows }) {
+export default function UserHeader({ rows }) {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4 }}>
             <Typography variant="h2" gutterBottom>
@@ -8,7 +8,7 @@ export default function UserHeader({ selectedNode, rows }) {
             </Typography>
 
             <Typography variant="h4" color="text.secondary">
-                인원:
+                인원: {rows.length}명
             </Typography>
         </Box>
     );

@@ -1,11 +1,11 @@
-import { DataGrid } from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid';
 import { useEffect, useState } from 'react';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
+import { Divider, useMediaQuery } from '@mui/material';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import Typography from '@mui/material/Typography';
-import { Divider, useMediaQuery } from '@mui/material';
 
 import { koKR } from '@mui/x-data-grid/locales';
 
@@ -17,8 +17,8 @@ import TableRow from '@mui/material/TableRow';
 
 // 🔥 추가
 import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 
 export default function CustomizedDataGrid() {
   const [rows, setRows] = useState([]);
@@ -73,6 +73,8 @@ export default function CustomizedDataGrid() {
       field: 'customerName',
       headerName: '고객명',
       flex: 1,
+      sortable: false,
+      filterable: false,
 
       renderHeader: () => (
         <FormControl size="small" fullWidth>
@@ -80,6 +82,7 @@ export default function CustomizedDataGrid() {
             value={customerFilter}
             displayEmpty
             onChange={(e) => setCustomerFilter(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             sx={{ fontSize: 14 }}
           >
             <MenuItem value="">
@@ -96,11 +99,11 @@ export default function CustomizedDataGrid() {
       ),
     },
 
-    { field: 'serviceNameMin', headerName: '서비스명', flex: 1 },
-    { field: 'systemNameMin', headerName: '시스템명', flex: 1 },
-    { field: 'hardwareName', headerName: '하드웨어', flex: 1 },
-    { field: 'osName', headerName: 'OS', flex: 1 },
-    { field: 'osIp', headerName: 'IP', flex: 1 },
+    { field: 'serviceNameMin', headerName: '서비스명', flex: 1, sortable: false, filterable: false },
+    { field: 'systemNameMin', headerName: '시스템명', flex: 1, sortable: false, filterable: false },
+    { field: 'hardwareName', headerName: '하드웨어', flex: 1, sortable: false, filterable: false },
+    { field: 'osName', headerName: 'OS', flex: 1, sortable: false, filterable: false },
+    { field: 'osIp', headerName: 'IP', flex: 1, sortable: false, filterable: false },
   ];
 
   const mobileColumns = [
@@ -108,6 +111,29 @@ export default function CustomizedDataGrid() {
       field: 'customerName',
       headerName: '고객명',
       flex: 1,
+      sortable: false,
+      filterable: false,
+      renderHeader: () => (
+        <FormControl size="small" fullWidth>
+          <Select
+            value={customerFilter}
+            displayEmpty
+            onChange={(e) => setCustomerFilter(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ fontSize: 14 }}
+          >
+            <MenuItem value="">
+              <em>고객명</em>
+            </MenuItem>
+
+            {customerList.map((customer) => (
+              <MenuItem key={customer} value={customer}>
+                {customer}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ),
       renderCell: (params) => (
         <div style={{ lineHeight: 1.4 }}>
           <div style={{ fontWeight: 600 }}>

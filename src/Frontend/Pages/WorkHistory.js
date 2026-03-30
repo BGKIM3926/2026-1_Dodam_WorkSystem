@@ -1,12 +1,11 @@
-import { Box } from '@mui/material';
-import HistoryHeader from './components/HistoryHeader';
-import HistoryActions from './components/HistoryActions';
-import HistoryList from './components/HistoryList';
-import { useState, useEffect } from 'react';
-import { useSelectedNode } from '../Contexts/SelectedNodeContext';
-import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import dayjs from 'dayjs';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelectedNode } from '../Contexts/SelectedNodeContext';
+import HistoryActions from './components/HistoryActions';
+import HistoryHeader from './components/HistoryHeader';
+import HistoryList from './components/HistoryList';
 
 
 export default function WorkHistory() {
@@ -66,9 +65,10 @@ export default function WorkHistory() {
     return (
         <>
             <Container
-                //maxWidth="lg"
+                maxWidth={false}
                 component="main"
-                sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch' }}>
+                disableGutters
+                sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
                 <HistoryHeader selectedNode={selectedNode} rows={rows} />
                 <HistoryActions 
                     filter={filter} 

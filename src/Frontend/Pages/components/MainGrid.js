@@ -1,5 +1,5 @@
+import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Copyright from '../internals/components/Copyright';
 
@@ -8,7 +8,11 @@ import CustomizedDataGrid from './CustomizedDataGrid';
 
 export default function MainGrid() {
   return (
-    <Box sx={{ width: '100%' }}>
+    <Container
+      maxWidth={false}
+      component="main"
+      disableGutters
+      sx={{ display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3, md: 4 } }}>
       {/* cards */}
       
       <Typography component="h2" variant="h2" sx={{ mb: 2, mt: 4 }}>
@@ -20,6 +24,6 @@ export default function MainGrid() {
         </Grid>
       </Grid>
       <Copyright sx={{ my: 4 }} />
-    </Box>
+    </Container>
   );
 }

@@ -1,21 +1,21 @@
 import {
-    Grid,
+    Box,
+    Button,
     Card,
     CardContent,
-    Typography,
-    IconButton,
     Dialog,
-    DialogTitle,
-    DialogContent,
     DialogActions,
-    Button,
+    DialogContent,
+    DialogTitle,
+    Grid,
+    IconButton,
+    MenuItem,
     TextField,
-    Box,
-    MenuItem
+    Typography
 } from '@mui/material';
 
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 
 import { useState } from 'react';
 
@@ -27,10 +27,17 @@ export default function UsersList({ rows, fetchUsers }) {
 
     // 🔥 수정
     const handleUpdate = async () => {
+        console.log('🔥 update form:', form);
+
         await fetch(`http://localhost:8080/api/users/${selectedRow.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form)
+            body: JSON.stringify({
+                id: selectedRow.id,
+                name: form.name,
+                role: form.role,
+                password: form.password
+            })
         });
 
         setOpenEdit(false);
@@ -48,9 +55,9 @@ export default function UsersList({ rows, fetchUsers }) {
     };
 
     return (
-        <Grid container spacing={4} columns={16}>
+        <Grid container spacing={4} columns={16} sx={{ justifyContent: 'flex-start' }}>
             {rows.map((row) => (
-                <Grid size={8} key={row.id}>
+                <Grid size={{ xs: 16, sm: 16, md: 8 }} key={row.id}>
                     <Card sx={{ position: 'relative', height: '100%' }}>
                         <CardContent>
 
@@ -119,9 +126,9 @@ export default function UsersList({ rows, fetchUsers }) {
                         value={form.role || ''}
                         onChange={(e) => setForm({ ...form, role: e.target.value })}
                     >
-                        <MenuItem value="MANAGER">관리자</MenuItem>
-                        <MenuItem value="MANAGER2">팀장</MenuItem>
-                        <MenuItem value="USER">일반사용자</MenuItem>
+                        <MenuItem value="관리자">관리자</MenuItem>
+                        <MenuItem value="팀장">팀장</MenuItem>
+                        <MenuItem value="일반사용자">일반사용자</MenuItem>
                     </TextField>
                 </DialogContent>
 

@@ -1,15 +1,16 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import Signin from './Frontend/Pages/Signin';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Dashboard from './Frontend/Pages/Dashboard';
 import Home from './Frontend/Pages/Home';
+import Signin from './Frontend/Pages/Signin';
 import Task from './Frontend/Pages/Task';
-import reportWebVitals from './reportWebVitals';
-import WorkHistory from './Frontend/Pages/WorkHistory';
-import CreateWorkHistory from './Frontend/Pages/components/CreateWorkHistory';
 import UsersPage from './Frontend/Pages/UsersPage';
+import WorkHistory from './Frontend/Pages/WorkHistory';
+import CreateUser from './Frontend/Pages/components/CreateUser';
+import CreateWorkHistory from './Frontend/Pages/components/CreateWorkHistory';
+import './index.css';
+import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -24,6 +25,7 @@ root.render(
           <Route path="workhistory" element={<WorkHistory />} />
           <Route path="workhistory/createWorkHistory" element={<CreateWorkHistory />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="users/create" element={<CreateUser />} />
         </Route>
       </Routes>
     </BrowserRouter>

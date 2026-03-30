@@ -68,32 +68,6 @@ const styles = {
             },
         },
     },
-    textareaInput: {
-        '& .MuiOutlinedInput-root': {
-            borderRadius: '8px',
-            border: '1.5px solid #e4e4e7',
-            fontSize: '15px',
-            minHeight: '420px',
-            '&:hover': {
-                borderColor: '#d4d4d8',
-            },
-            '&.Mui-focused': {
-                borderColor: '#2563eb',
-                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
-            },
-        },
-        '& .MuiOutlinedInput-input': {
-            padding: '12px',
-            color: '#18181b',
-            lineHeight: '1.5',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-            '&::placeholder': {
-                color: '#a1a1aa',
-                opacity: 1,
-            },
-        },
-    },
     selectInput: {
         '& .MuiOutlinedInput-root': {
             height: '44px',
@@ -151,107 +125,92 @@ const styles = {
     },
 };
 
-export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
+export default function CreateUserForm({ form, setForm, onSubmit }) {
     const navigate = useNavigate();
-
-    const workTypeOptions = ['정기점검', '장애조치', '기술지원', '구축'];
 
     return (
         <Box sx={styles.container} component="form" noValidate autoComplete="off">
-            {/* 제목 영역 */}
+            {/* 제목 */}
             <Box sx={styles.titleSection}>
-                <Typography sx={styles.title}>이력 등록</Typography>
-                <Typography sx={styles.subtitle}>새 작업 기록을 등록합니다</Typography>
+                <Typography sx={styles.title}>사용자 추가</Typography>
+                <Typography sx={styles.subtitle}>
+                    새 사용자를 등록합니다
+                </Typography>
             </Box>
 
-            {/* 입력 폼 영역 */}
+            {/* 폼 */}
             <Box sx={styles.formSection}>
-                {/* 시스템 */}
+                {/* 이름 */}
                 <Box>
-                    <Typography sx={styles.fieldLabel}>시스템</Typography>
-                    <FormControl fullWidth>
-                        <Select
-                            value={form.systemId || ''}
-                            displayEmpty
-                            onChange={(e) =>
-                                setForm({ ...form, systemId: e.target.value })
-                            }
-                            sx={styles.selectInput}
-                        >
-                            <MenuItem value="" disabled>
-                                시스템 선택
-                            </MenuItem>
-
-                            {systems.map((sys) => (
-                                <MenuItem key={sys.systemId} value={sys.systemID}>
-                                    {sys.systemNameMin}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
-
-                {/* 작업 유형 */}
-                <Box>
-                    <Typography sx={styles.fieldLabel}>작업 유형</Typography>
-                    <FormControl fullWidth>
-                        <Select
-                            value={form.workType || ''}
-                            displayEmpty
-                            onChange={(e) =>
-                                setForm({ ...form, workType: e.target.value })
-                            }
-                            sx={styles.selectInput}
-                        >
-                            <MenuItem value="" disabled>
-                                작업유형 선택
-                            </MenuItem>
-                            {workTypeOptions.map((type) => (
-                                <MenuItem key={type} value={type}>
-                                    {type}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Box>
-
-                {/* 장비 */}
-                <Box>
-                    <Typography sx={styles.fieldLabel}>장비</Typography>
+                    <Typography sx={styles.fieldLabel}>이름</Typography>
                     <TextField
                         fullWidth
-                        placeholder="장비명을 입력하세요"
-                        value={form.equipment || ''}
+                        placeholder="이름을 입력하세요"
+                        value={form.name}
                         onChange={(e) =>
-                            setForm({ ...form, equipment: e.target.value })
+                            setForm({ ...form, name: e.target.value })
                         }
                         sx={styles.fieldInput}
                     />
                 </Box>
 
-                {/* 내용 */}
+                {/* 권한 */}
                 <Box>
-                    <Typography sx={styles.fieldLabel}>내용</Typography>
+                    <Typography sx={styles.fieldLabel}>권한</Typography>
+                    <FormControl fullWidth>
+                        <Select
+                            value={form.role || ''}
+                            displayEmpty
+                            onChange={(e) =>
+                                setForm({ ...form, role: e.target.value })
+                            }
+                            sx={styles.selectInput}
+                        >
+                            <MenuItem value="" disabled>
+                                권한 선택
+                            </MenuItem>
+                            <MenuItem value="관리자">관리자</MenuItem>
+                            <MenuItem value="팀장">팀장</MenuItem>
+                            <MenuItem value="일반사용자">일반사용자</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
+
+                {/* ID */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>ID</Typography>
                     <TextField
                         fullWidth
-                        placeholder="작업 내용을 자세히 입력하세요"
-                        multiline
-                        minRows={15}
-                        maxRows={Infinity}
-                        value={form.issue || ''}
+                        placeholder="ID를 입력하세요"
+                        value={form.id}
                         onChange={(e) =>
-                            setForm({ ...form, issue: e.target.value })
+                            setForm({ ...form, id: e.target.value })
                         }
-                        sx={styles.textareaInput}
+                        sx={styles.fieldInput}
+                    />
+                </Box>
+
+                {/* 비밀번호 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>비밀번호</Typography>
+                    <TextField
+                        fullWidth
+                        type="password"
+                        placeholder="비밀번호를 입력하세요"
+                        value={form.password}
+                        onChange={(e) =>
+                            setForm({ ...form, password: e.target.value })
+                        }
+                        sx={styles.fieldInput}
                     />
                 </Box>
             </Box>
 
-            {/* 버튼 영역 */}
+            {/* 버튼 */}
             <Stack direction="row" sx={styles.buttonSection}>
                 <Button
                     startIcon={<ArrowBackIcon />}
-                    onClick={() => navigate('/dashboard/workhistory')}
+                    onClick={() => navigate('/dashboard/users')}
                     sx={styles.backButton}
                 >
                     뒤로가기

@@ -1,11 +1,8 @@
 import { Box } from '@mui/material';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import WorkHistoryForm from './WorkHistoryForm';
-import { Typography } from '@mui/material';
 
 export default function CreateWorkHistory() {
     const navigate = useNavigate();
@@ -76,7 +73,7 @@ export default function CreateWorkHistory() {
     };
 
     return (
-        <Box sx={{ width: '100%', mx: 'auto', mt: 3}}>
+        <Box sx={{ width: '100%', ml: 0, mt: 3 }}>
             <WorkHistoryForm
                 form={form}
                 setForm={setForm}

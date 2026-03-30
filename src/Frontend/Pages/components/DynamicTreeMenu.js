@@ -1,14 +1,13 @@
-import * as React from 'react';
-import { useState } from 'react';
 import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
 import { TreeItem } from '@mui/x-tree-view/TreeItem';
+import { useState } from 'react';
 
 export default function DynamicTreeMenu({ data, onSelect, selectedNode }) {
     const [expanded, setExpanded] = useState([]);
 
     const handleExpand = (nodeId) => {
         setExpanded((prev) =>
-            prev.includes(nodeId) ? prev : [...prev, nodeId]
+            prev.includes(nodeId) ? prev.filter(id => id !== nodeId) : [...prev, nodeId]
         );
     };
 
@@ -19,17 +18,18 @@ export default function DynamicTreeMenu({ data, onSelect, selectedNode }) {
                 itemId={node.id}
                 label={node.name}
 
-                // 🔥 hover 시 펼치기
-                onMouseEnter={() => handleExpand(node.id)}
-
-                // 🔥 클릭 처리
+                // 🔥 클릭 시 펼치기 및 선택
                 onClick={(e) => {
                     console.log(node);
                     e.stopPropagation();
 
-                    if (!node.serviceName) return; // 부모 클릭 방지
-
-                    onSelect(node);
+                    if (!node.serviceName) {
+                        // 부모 노드 클릭: 펼치기
+                        handleExpand(node.id);
+                    } else {
+                        // 자식 노드 클릭: 선택
+                        onSelect(node);
+                    }
                 }}
             >
                 {node.children && renderTree(node.children)}

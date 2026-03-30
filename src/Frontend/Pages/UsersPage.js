@@ -1,9 +1,9 @@
-import { Container, Box } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import { useEffect, useState } from 'react';
 
-import UsersList from './components/UserList';
 import UsersActions from './components/UserActions';
 import UserHeader from './components/UserHeader';
+import UsersList from './components/UserList';
 
 export default function UsersPage() {
     const [rows, setRows] = useState([]);
@@ -44,10 +44,10 @@ export default function UsersPage() {
 
     return (
         <Container
-            maxWidth="lg"
+            maxWidth={false}
             component="main"
-            sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2 }}>
-            <UserHeader />
+            sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
+            <UserHeader rows={rows} />
             <Box sx={{ mb: 2 }}>
                 <UsersActions onAdd={() => setOpenCreate(true)} />
             </Box>

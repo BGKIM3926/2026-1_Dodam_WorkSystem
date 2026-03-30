@@ -1,20 +1,17 @@
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import Avatar from '@mui/material/Avatar';
-import PropTypes from 'prop-types';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
-import MenuButton from './MenuButton';
-import MenuContent from './MenuContent';
-import CardAlert from './CardAlert';
+import PropTypes from 'prop-types';
 import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import OptionsMenu from './OptionsMenu';
-import { buildTree } from '../../Utils/buildTree';
+import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
+import { buildTree } from '../../Utils/buildTree';
+import MenuContent from './MenuContent';
 
 function SideMenuMobile({ open, toggleDrawer }) {
   const [user, setUser] = useState({
@@ -25,6 +22,8 @@ function SideMenuMobile({ open, toggleDrawer }) {
 
   const [treeData, setTreeData] = useState([]);
   const { setSelectedNode } = useSelectedNode();
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     fetch('http://localhost:8080/api/dsystem')
@@ -42,6 +41,12 @@ function SideMenuMobile({ open, toggleDrawer }) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('loginUser'); // 🔥 핵심
+    navigate('/');
+  };
+
   return (
     <Drawer
       anchor="right"
@@ -81,7 +86,6 @@ function SideMenuMobile({ open, toggleDrawer }) {
                 {user.role}
               </Typography>
             </Box>
-            <OptionsMenu />
           </Stack>
         </Stack>
         <Divider />
@@ -93,8 +97,8 @@ function SideMenuMobile({ open, toggleDrawer }) {
           <Divider />
         </Stack>
         <Stack sx={{ p: 2 }}>
-          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />}>
-            Logout
+          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />} onClick={handleLogout}>
+            로그아웃
           </Button>
         </Stack>
       </Stack>
