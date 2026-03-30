@@ -28,6 +28,7 @@ export default function HistoryList({ rows, isGlobalView }) {
     const [openDelete, setOpenDelete] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
     const [form, setForm] = useState({});
+    const [openDetail, setOpenDetail] = useState(false);
 
     const handleUpdate = async () => {
         await fetch(`http://localhost:8080/api/history/${selectedRow.historyId}`, {
@@ -53,11 +54,25 @@ export default function HistoryList({ rows, isGlobalView }) {
         <Grid container spacing={4} columns={16} sx={{ justifyContent: 'flex-start' }}>
             {rows.map((row) => (
                 <Grid size={{ xs: 16, sm: 16, md: 8 }} key={row.historyId}>
-                    <Card sx={{ position: 'relative', height: '100%' }}>
+                    <Card sx={{
+                        position: 'relative',
+                        height: '100%',
+                        cursor: 'pointer',
+                        transition: '0.2s',
+                        '&:hover': {
+                            boxShadow: 6,
+                            transform: 'translateY(-4px)'
+                        }
+                        }} 
+                        onClick={() => {
+                        setSelectedRow(row);
+                        setOpenDetail(true);
+                    }}>
                         <CardContent>
                             {!isGlobalView && (
                                 <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
-                                    <IconButton onClick={() => {
+                                    <IconButton onClick={(e) => {
+                                        e.stopPropagation();
                                         setSelectedRow(row);
                                         setForm(row);
                                         setOpenEdit(true);
@@ -65,7 +80,8 @@ export default function HistoryList({ rows, isGlobalView }) {
                                         <EditIcon />
                                     </IconButton>
 
-                                    <IconButton onClick={() => {
+                                    <IconButton onClick={(e) => {
+                                        e.stopPropagation();
                                         setSelectedRow(row);
                                         setOpenDelete(true);
                                     }}>
@@ -158,7 +174,33 @@ export default function HistoryList({ rows, isGlobalView }) {
                     </Button>
                 </DialogActions>
             </Dialog>
+            
+            <Dialog
+                open={openDetail}
+                onClose={() => setOpenDetail(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>이력 상세</DialogTitle>
 
+                <DialogContent dividers>
+                    {selectedRow && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Typography><b>지역:</b> {selectedRow.region}</Typography>
+                            <Typography><b>시스템:</b> {selectedRow.systemName}</Typography>
+                            <Typography><b>작업 유형:</b> {selectedRow.workType}</Typography>
+                            <Typography><b>내용:</b> {selectedRow.issue}</Typography>
+                            <Typography><b>장비:</b> {selectedRow.equipment}</Typography>
+                            <Typography><b>작업자:</b> {selectedRow.workerName}</Typography>
+                            <Typography><b>방문일:</b> {selectedRow.visitDate}</Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+
+                <DialogActions>
+                    <Button onClick={() => setOpenDetail(false)}>닫기</Button>
+                </DialogActions>
+            </Dialog>
         </Grid>
     );
 }
