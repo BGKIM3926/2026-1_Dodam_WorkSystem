@@ -12,7 +12,7 @@ export default function MainGrid() {
       maxWidth={false}
       component="main"
       disableGutters
-      sx={{ display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3, md: 4 } }}>
+      sx={{ display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3, md: 4 }, gap: 2 }}>
       {/* cards */}
       
       <Typography component="h2" variant="h2" sx={{ mb: 2, mt: 4 }}>

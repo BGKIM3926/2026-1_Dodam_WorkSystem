@@ -1,6 +1,6 @@
 import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import WorkHistoryForm from './WorkHistoryForm';
 
@@ -14,12 +14,13 @@ export default function CreateWorkHistory() {
         equipment: ''
     });
 
-    const location = useLocation();
-    const systemId = selectedNode?.systemId;
+    // ✅ 파일 state 추가
+    const [files, setFiles] = useState([]);
+
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
     const [systems, setSystems] = useState([]);
-    
+
     useEffect(() => {
         if (!serviceName) return;
 
@@ -42,6 +43,7 @@ export default function CreateWorkHistory() {
             alert('시스템을 선택하세요');
             return;
         }
+
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
 
@@ -54,22 +56,39 @@ export default function CreateWorkHistory() {
             createdBy: user.id
         };
 
-        console.log('systemId:', systemId);
-        console.log('🔥 body:', JSON.stringify(body));
+        try {
+            // ✅ FormData 생성
+            const formData = new FormData();
 
-        const res = await fetch('http://localhost:8080/api/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
+            // JSON 데이터 추가
+            formData.append(
+                "data",
+                new Blob([JSON.stringify(body)], { type: "application/json" })
+            );
 
-        if (!res.ok) {
-            const text = await res.text();
-            alert('등록 실패: ' + text);
-            return;
+            // 파일 추가
+            files.forEach(file => {
+                formData.append("files", file);
+            });
+
+            // ✅ multipart 요청
+            const res = await fetch('http://localhost:8080/api/history/with-files', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                alert('등록 실패: ' + text);
+                return;
+            }
+
+            navigate('/dashboard/workhistory');
+
+        } catch (err) {
+            console.error('🔥 업로드 실패:', err);
+            alert('파일 업로드 중 오류 발생');
         }
-
-        navigate('/dashboard/workhistory');
     };
 
     return (
@@ -79,6 +98,8 @@ export default function CreateWorkHistory() {
                 setForm={setForm}
                 onSubmit={handleSubmit}
                 systems={systems}
+                files={files}        // ✅ 추가
+                setFiles={setFiles}  // ✅ 추가
             />
         </Box>
     );

@@ -12,6 +12,7 @@ import {
     IconButton,
     InputLabel,
     MenuItem,
+    Pagination,
     Select,
     TextField,
     Typography
@@ -20,15 +21,24 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function HistoryList({ rows, isGlobalView }) {
+export default function HistoryList({ rows, isGlobalView, onRefresh }) {
 
     const [openEdit, setOpenEdit] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
     const [form, setForm] = useState({});
     const [openDetail, setOpenDetail] = useState(false);
+    const [page, setPage] = useState(1);
+
+    const itemsPerPage = 8;
+    const totalPages = Math.max(1, Math.ceil(rows.length / itemsPerPage));
+    const pagedRows = rows.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    useEffect(() => {
+        setPage(1);
+    }, [rows]);
 
     const handleUpdate = async () => {
         await fetch(`http://localhost:8080/api/history/${selectedRow.historyId}`, {
@@ -38,7 +48,9 @@ export default function HistoryList({ rows, isGlobalView }) {
         });
 
         setOpenEdit(false);
-        window.location.reload();
+        if (onRefresh) {
+            onRefresh();
+        }
     };
 
     const handleDelete = async () => {
@@ -47,12 +59,14 @@ export default function HistoryList({ rows, isGlobalView }) {
         });
 
         setOpenDelete(false);
-        window.location.reload();
+        if (onRefresh) {
+            onRefresh();
+        }
     };
 
     return (
         <Grid container spacing={4} columns={16} sx={{ justifyContent: 'flex-start' }}>
-            {rows.map((row) => (
+            {pagedRows.map((row) => (
                 <Grid size={{ xs: 16, sm: 16, md: 8 }} key={row.historyId}>
                     <Card sx={{
                         position: 'relative',
@@ -114,6 +128,19 @@ export default function HistoryList({ rows, isGlobalView }) {
                     </Card>
                 </Grid>
             ))}
+
+            {rows.length > itemsPerPage && (
+                <Grid size={16}>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        <Pagination
+                            count={totalPages}
+                            page={page}
+                            onChange={(_, value) => setPage(value)}
+                            color="primary"
+                        />
+                    </Box>
+                </Grid>
+            )}
 
             <Dialog open={openEdit} onClose={() => setOpenEdit(false)}>
                 <DialogTitle>이력 수정</DialogTitle>
@@ -187,12 +214,36 @@ export default function HistoryList({ rows, isGlobalView }) {
                     {selectedRow && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Typography><b>지역:</b> {selectedRow.region}</Typography>
+                            <Typography><b>서비스명:</b> {selectedRow.serviceName || '-'}</Typography>
                             <Typography><b>시스템:</b> {selectedRow.systemName}</Typography>
                             <Typography><b>작업 유형:</b> {selectedRow.workType}</Typography>
                             <Typography><b>내용:</b> {selectedRow.issue}</Typography>
                             <Typography><b>장비:</b> {selectedRow.equipment}</Typography>
                             <Typography><b>작업자:</b> {selectedRow.workerName}</Typography>
                             <Typography><b>방문일:</b> {selectedRow.visitDate}</Typography>
+
+                            <Typography><b>첨부파일:</b></Typography>
+
+                            {selectedRow.attachments && selectedRow.attachments.length > 0 ? (
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {selectedRow.attachments.map((file) => (
+                                        <Button
+                                            key={file.attachmentId}
+                                            variant="outlined"
+                                            sx={{ justifyContent: 'flex-start' }}
+                                            onClick={() => {
+                                                window.open(
+                                                    `http://localhost:8080/api/history/attachments/${file.attachmentId}/download`
+                                                );
+                                            }}
+                                        >
+                                            📎 {file.fileName}
+                                        </Button>
+                                    ))}
+                                </Box>
+                            ) : (
+                                <Typography color="text.secondary">첨부파일 없음</Typography>
+                            )}
                         </Box>
                     )}
                 </DialogContent>

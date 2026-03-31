@@ -1,22 +1,22 @@
-import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import MuiCard from '@mui/material/Card';
 import Checkbox from '@mui/material/Checkbox';
 import CssBaseline from '@mui/material/CssBaseline';
+import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
-import FormControl from '@mui/material/FormControl';
 import Link from '@mui/material/Link';
+import Stack from '@mui/material/Stack';
+import { styled } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
-import MuiCard from '@mui/material/Card';
-import { styled } from '@mui/material/styles';
+import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import ForgotPassword from './components/ForgotPassword';
+import dodamIcon from './internals/components/dodam_icon.png';
 import AppTheme from './shared-theme/AppTheme';
 import ColorModeSelect from './shared-theme/ColorModeSelect';
-import { SitemarkIcon } from './components/CustomIcons';
 
 const Card = styled(MuiCard)(({ theme }) => ({
     display: 'flex',
@@ -66,7 +66,17 @@ function Signin(props) {
     const [passwordError, setPasswordError] = React.useState(false);
     const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
     const [open, setOpen] = React.useState(false);
+    const [savedId, setSavedId] = React.useState('');
+    const [rememberId, setRememberId] = React.useState(false);
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const stored = localStorage.getItem('savedLoginId');
+        if (stored) {
+            setSavedId(stored);
+            setRememberId(true);
+        }
+    }, []);
 
     const handleClickOpen = () => {
         setOpen(true);
@@ -101,6 +111,11 @@ function Signin(props) {
             if (response.ok) {
                 const result = await response.json();
                 // alert('로그인 성공');
+                if (rememberId) {
+                    localStorage.setItem('savedLoginId', id);
+                } else {
+                    localStorage.removeItem('savedLoginId');
+                }
                 localStorage.setItem('loginUser', JSON.stringify(result));
                 navigate('/dashboard/home');
             } else {
@@ -146,7 +161,18 @@ function Signin(props) {
             <SignInContainer direction="column" justifyContent="space-between">
                 <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
                 <Card variant="outlined">
-                    <SitemarkIcon />
+                    <Box
+                        component="img"
+                        src={dodamIcon}
+                        alt="Dodam logo"
+                        sx={{
+                            width: 100,
+                            height: 50,
+                            objectFit: 'contain',
+                            alignSelf: 'flex-start',
+                            ml: -4,
+                        }}
+                    />
                     <Typography
                         component="h1"
                         variant="h4"
@@ -180,6 +206,8 @@ function Signin(props) {
                                 fullWidth
                                 variant="outlined"
                                 color={idError ? 'error' : 'primary'}
+                                value={savedId}
+                                onChange={(e) => setSavedId(e.target.value)}
                             />
                         </FormControl>
                         <FormControl>
@@ -199,7 +227,13 @@ function Signin(props) {
                             />
                         </FormControl>
                         <FormControlLabel
-                            control={<Checkbox value="remember" color="primary" />}
+                            control={
+                                <Checkbox
+                                    checked={rememberId}
+                                    onChange={(e) => setRememberId(e.target.checked)}
+                                    color="primary"
+                                />
+                            }
                             label="ID 저장"
                         />
                         <ForgotPassword open={open} handleClose={handleClose} />

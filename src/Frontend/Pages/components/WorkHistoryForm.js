@@ -1,9 +1,11 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import {
     Box,
     Button,
     FormControl,
     MenuItem,
+    Paper,
     Select,
     Stack,
     TextField,
@@ -151,10 +153,22 @@ const styles = {
     },
 };
 
-export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
+export default function WorkHistoryForm({ form, setForm, onSubmit, systems, files, setFiles }) {
     const navigate = useNavigate();
 
     const workTypeOptions = ['정기점검', '장애조치', '기술지원', '구축'];
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const droppedFiles = Array.from(e.dataTransfer.files);
+        setFiles((prev) => [...prev, ...droppedFiles]);
+    };
+
+    const handleFileChange = (e) => {
+        const selected = Array.from(e.target.files);
+        setFiles((prev) => [...prev, ...selected]);
+    };
+
 
     return (
         <Box sx={styles.container} component="form" noValidate autoComplete="off">
@@ -245,7 +259,37 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems }) {
                         sx={styles.textareaInput}
                     />
                 </Box>
+
+                {/* 첨부파일 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>첨부파일</Typography>
+
+                    <Paper
+                        onDrop={handleDrop}
+                        onDragOver={(e) => e.preventDefault()}
+                        sx={{
+                            p: 3,
+                            textAlign: 'center',
+                            border: '2px dashed #ccc',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <CloudUploadIcon fontSize="large" />
+                        <Typography>파일을 드래그하거나 클릭해서 업로드</Typography>
+
+                        <Button component="label" variant="outlined" sx={{ mt: 2 }}>
+                            파일 선택
+                            <input hidden multiple type="file" onChange={handleFileChange} />
+                        </Button>
+                    </Paper>
+
+                    {files.map((file, idx) => (
+                        <Typography key={idx}>{file.name}</Typography>
+                    ))}
+                </Box>
             </Box>
+
+            
 
             {/* 버튼 영역 */}
             <Stack direction="row" sx={styles.buttonSection}>

@@ -1,12 +1,32 @@
 package com.example.backend.controller;
 
-import com.example.backend.service.WorkHistoryService;
-import com.example.backend.dto.WorkHistoryResponseDto;
-import com.example.backend.entity.MaintenanceHistory;
-
-import org.springframework.web.bind.annotation.*;
-
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.backend.dto.WorkHistoryResponseDto;
+import com.example.backend.entity.Attachment;
+import com.example.backend.entity.MaintenanceHistory;
+import com.example.backend.repository.AttachmentRepository;
+import com.example.backend.service.WorkHistoryService;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -14,9 +34,11 @@ import java.util.List;
 public class WorkHistoryController {
 
     private final WorkHistoryService service;
+    private final AttachmentRepository attachmentRepository;
 
-    public WorkHistoryController(WorkHistoryService service) {
+    public WorkHistoryController(WorkHistoryService service, AttachmentRepository attachmentRepository) {
         this.service = service;
+        this.attachmentRepository = attachmentRepository;
     }
 
     @GetMapping
@@ -29,10 +51,19 @@ public class WorkHistoryController {
         return service.getAll();
     }
 
-    @PostMapping
-    public MaintenanceHistory create(
-            @RequestBody MaintenanceHistory history) {
-        return service.create(history);
+    @PostMapping("/with-files")
+    public MaintenanceHistory createWithFiles(
+        @RequestPart("data") MaintenanceHistory history,
+        @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) throws IOException {
+
+        MaintenanceHistory saved = service.create(history);
+
+        if (files != null && !files.isEmpty()) {
+            service.saveAttachments(saved.getHistoryId(), files);
+        }
+
+        return saved;
     }
 
     @PutMapping("/{id}")
@@ -52,5 +83,17 @@ public class WorkHistoryController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.delete(id);
+    }
+
+    @GetMapping("/attachments/{id}/download")
+    public ResponseEntity<Resource> download(@PathVariable Long id) throws IOException {
+        Attachment file = attachmentRepository.findById(id).orElseThrow();
+
+        Path path = Paths.get(file.getFilePath());
+        Resource resource = new UrlResource(path.toUri());
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
+            .body(resource);
     }
 }

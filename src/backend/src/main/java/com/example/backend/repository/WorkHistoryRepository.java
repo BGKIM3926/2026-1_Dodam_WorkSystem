@@ -1,13 +1,13 @@
 package com.example.backend.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
-import com.example.backend.entity.MaintenanceHistory;
 import com.example.backend.dto.WorkHistoryResponseDto;
+import com.example.backend.entity.MaintenanceHistory;
 
 @Repository
 public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory, Long> {
@@ -22,6 +22,7 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                     m.equipment,
                     u.name,
                     m.region,
+                    d.serviceNameMin,
                     d.systemNameMin,
                     m.visitDate
                 )
@@ -29,6 +30,7 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                 JOIN User u ON m.workerId = u.id
                 JOIN DSystem d ON m.systemId = d.systemId
                 WHERE d.serviceNameMin = :serviceName
+                ORDER BY m.visitDate DESC, m.historyId DESC
             """)
     List<WorkHistoryResponseDto> findWithUserName(String serviceName);
 
@@ -40,12 +42,14 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                     m.equipment,
                     u.name,
                     m.region,
+                    d.serviceNameMin,
                     d.systemNameMin,
                     m.visitDate
                 )
                 FROM MaintenanceHistory m
                 JOIN User u ON m.workerId = u.id
                 JOIN DSystem d ON m.systemId = d.systemId
+                ORDER BY m.visitDate DESC, m.historyId DESC
             """)
     List<WorkHistoryResponseDto> findAllWithUserName();
 

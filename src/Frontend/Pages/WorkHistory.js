@@ -17,6 +17,21 @@ export default function WorkHistory() {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
 
+    const fetchRows = () => {
+        if (selectedNode?.serviceName) {
+            fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
+                .then((res) => res.json())
+                .then((data) => setRows(data))
+                .catch((err) => console.error(err));
+            return;
+        }
+
+        fetch('http://localhost:8080/api/history/all')
+            .then((res) => res.json())
+            .then((data) => setRows(data))
+            .catch((err) => console.error(err));
+    };
+
     const filteredRows = rows.filter(row => {
         // 1. workType 필터
         const matchType =
@@ -36,22 +51,7 @@ export default function WorkHistory() {
 
     useEffect(() => {
         console.log('selectedNode:', selectedNode);
-
-        // 트리 구조에서 선택했다면 기존 방식
-        if (selectedNode?.serviceName) {
-            fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
-                .then(res => res.json())
-                .then(data => setRows(data))
-                .catch(err => console.error(err));
-        }
-        // 이력 관리 버튼 그 자체를 클릭했다면 전체 조회
-        else {
-            fetch(`http://localhost:8080/api/history/all`)
-                .then(res => res.json())
-                .then(data => setRows(data))
-                .catch(err => console.error(err));
-        }
-
+        fetchRows();
     }, [selectedNode]);
 
     useEffect(() => {
@@ -78,7 +78,7 @@ export default function WorkHistory() {
                     setStartDate={setStartDate}
                     endDate={endDate}
                     setEndDate={setEndDate} />
-                <HistoryList rows={filteredRows} isGlobalView={isGlobalView} />
+                <HistoryList rows={filteredRows} isGlobalView={isGlobalView} onRefresh={fetchRows} />
             </Container>
 
             
