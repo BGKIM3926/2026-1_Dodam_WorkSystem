@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { Alert, Box, Snackbar } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
@@ -16,6 +16,7 @@ export default function CreateWorkHistory() {
 
     // ✅ 파일 state 추가
     const [files, setFiles] = useState([]);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
 
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
@@ -33,14 +34,14 @@ export default function CreateWorkHistory() {
 
     useEffect(() => {
         if (!serviceName) {
-            alert('잘못된 접근입니다.');
+            setSnackbar({ open: true, message: '잘못된 접근입니다.', severity: 'error' });
             navigate('/dashboard/workhistory');
         }
     }, []);
 
     const handleSubmit = async () => {
         if (!form.systemId) {
-            alert('시스템을 선택하세요');
+            setSnackbar({ open: true, message: '시스템을 선택하세요', severity: 'warning' });
             return;
         }
 
@@ -79,7 +80,7 @@ export default function CreateWorkHistory() {
 
             if (!res.ok) {
                 const text = await res.text();
-                alert('등록 실패: ' + text);
+                setSnackbar({ open: true, message: '등록 실패: ' + text, severity: 'error' });
                 return;
             }
 
@@ -87,12 +88,26 @@ export default function CreateWorkHistory() {
 
         } catch (err) {
             console.error('🔥 업로드 실패:', err);
-            alert('파일 업로드 중 오류 발생');
+            setSnackbar({ open: true, message: '파일 업로드 중 오류 발생', severity: 'error' });
         }
     };
 
     return (
         <Box sx={{ width: '100%', ml: 0, mt: 3 }}>
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    variant="filled"
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
             <WorkHistoryForm
                 form={form}
                 setForm={setForm}

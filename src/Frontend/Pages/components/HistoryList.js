@@ -225,21 +225,40 @@ export default function HistoryList({ rows, isGlobalView, onRefresh }) {
                             <Typography><b>첨부파일:</b></Typography>
 
                             {selectedRow.attachments && selectedRow.attachments.length > 0 ? (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    {selectedRow.attachments.map((file) => (
-                                        <Button
-                                            key={file.attachmentId}
-                                            variant="outlined"
-                                            sx={{ justifyContent: 'flex-start' }}
-                                            onClick={() => {
-                                                window.open(
-                                                    `http://localhost:8080/api/history/attachments/${file.attachmentId}/download`
-                                                );
-                                            }}
-                                        >
-                                            📎 {file.fileName}
-                                        </Button>
-                                    ))}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {selectedRow.attachments.map((file) => {
+                                        const ext = file.fileName?.split('.').pop()?.toLowerCase();
+                                        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+                                        const imageUrl = `http://localhost:8080/api/history/attachments/${file.attachmentId}/download`;
+
+                                        return (
+                                            <Box key={file.attachmentId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                {isImage && (
+                                                    <Box
+                                                        component="img"
+                                                        src={imageUrl}
+                                                        alt={file.fileName}
+                                                        sx={{
+                                                            maxWidth: '100%',
+                                                            maxHeight: 300,
+                                                            objectFit: 'contain',
+                                                            borderRadius: 1,
+                                                            border: '1px solid #e0e0e0',
+                                                        }}
+                                                    />
+                                                )}
+                                                <Button
+                                                    variant="outlined"
+                                                    sx={{ justifyContent: 'flex-start' }}
+                                                    onClick={() => {
+                                                        window.open(imageUrl);
+                                                    }}
+                                                >
+                                                    📎 {file.fileName}
+                                                </Button>
+                                            </Box>
+                                        );
+                                    })}
                                 </Box>
                             ) : (
                                 <Typography color="text.secondary">첨부파일 없음</Typography>

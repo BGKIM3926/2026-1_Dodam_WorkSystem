@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { Alert, Box, Snackbar } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CreateUserForm from './CreateUserForm';
@@ -13,11 +13,13 @@ export default function CreateUser() {
         role: 'USER'
     });
 
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
+
     
 
     const handleSubmit = async () => {
         if (!form.id || !form.password || !form.name) {
-            alert('모든 값을 입력하세요');
+            setSnackbar({ open: true, message: '모든 값을 입력하세요', severity: 'warning' });
             return;
         }
 
@@ -49,11 +51,11 @@ export default function CreateUser() {
                 return;
             }
 
-            alert('사용자 등록 완료');
-            navigate('/dashboard/users');
+            setSnackbar({ open: true, message: '사용자 등록 완료', severity: 'success' });
+            setTimeout(() => navigate('/dashboard/users'), 1000);
         } catch (err) {
             console.error('사용자 등록 중 오류:', err);
-            alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            setSnackbar({ open: true, message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', severity: 'error' });
         }
     };
 
@@ -61,6 +63,20 @@ export default function CreateUser() {
         <Box
             sx={{ width: '100%', ml: 0, mt: 3 }}
         >
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    severity={snackbar.severity}
+                    variant="filled"
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
             <CreateUserForm
                 form={form}
                 setForm={setForm}

@@ -1,8 +1,10 @@
 import AddIcon from '@mui/icons-material/Add';
-import { Box, Button } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { Alert, Box, Button, IconButton, Snackbar, Tooltip } from '@mui/material';
 import Chip from '@mui/material/Chip';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
@@ -15,9 +17,24 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
 
-    
+    const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
     return (
+        <>
+        <Snackbar
+            open={snackbar.open}
+            autoHideDuration={3000}
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+            <Alert
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                severity="warning"
+                variant="filled"
+            >
+                {snackbar.message}
+            </Alert>
+        </Snackbar>
         <Box
             sx={{
                 display: 'flex',
@@ -32,7 +49,8 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                 sx={{
                     display: 'flex', 
                     gap: 1, 
-                    flexWrap: 'wrap'
+                    flexWrap: 'nowrap',
+                    overflow: 'auto'
                 }}
             >
                 <Chip
@@ -71,12 +89,24 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                 sx={{
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
-                    gap: { xs: 2, md: 3 },
+                    gap: { xs: 2, md: 1 },
                     alignItems: { xs: 'stretch', md: 'center' },
                     justifyContent: 'flex-end',
                     width: { xs: '100%', md: 'auto' }
                 }}
             >
+                <Tooltip title="날짜 초기화">
+                    <IconButton
+                        onClick={() => {
+                            setStartDate(null);
+                            setEndDate(null);
+                        }}
+                        size="medium"
+                    >
+                        <RefreshIcon />
+                    </IconButton>
+                </Tooltip>
+
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 2 }, alignItems: 'stretch' }}>
                         <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '150px' } }}>
@@ -110,7 +140,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                                 value={endDate}
                                 onChange={(newValue) => {
                                     if (startDate && newValue && newValue.isBefore(startDate)) {
-                                        alert('종료일은 시작일보다 이후여야 합니다.');
+                                        setSnackbar({ open: true, message: '종료일은 시작일보다 이후여야 합니다.' });
                                         return;
                                     }
                                     setEndDate(newValue);
@@ -146,7 +176,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                         sx={{ whiteSpace: 'nowrap' }}
                         onClick={() => {
                             if (!serviceName) {
-                                alert('시스템을 먼저 선택하세요');
+                                setSnackbar({ open: true, message: '시스템을 먼저 선택하세요' });
                                 return;
                             }
 
@@ -160,5 +190,6 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                 )}
             </Box>
         </Box>
+        </>
     );
 }

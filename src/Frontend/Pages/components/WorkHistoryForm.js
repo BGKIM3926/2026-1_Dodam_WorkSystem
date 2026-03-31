@@ -1,9 +1,11 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import {
     Box,
     Button,
     FormControl,
+    IconButton,
     MenuItem,
     Paper,
     Select,
@@ -284,7 +286,16 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                     </Paper>
 
                     {files.map((file, idx) => (
-                        <Typography key={idx}>{file.name}</Typography>
+                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                            <Typography sx={{ flex: 1 }}>📎 {file.name}</Typography>
+                            <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
                     ))}
                 </Box>
             </Box>

@@ -1,3 +1,4 @@
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import MuiCard from '@mui/material/Card';
@@ -7,6 +8,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
 import Link from '@mui/material/Link';
+import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
@@ -68,6 +70,7 @@ function Signin(props) {
     const [open, setOpen] = React.useState(false);
     const [savedId, setSavedId] = React.useState('');
     const [rememberId, setRememberId] = React.useState(false);
+    const [snackbar, setSnackbar] = React.useState({ open: false, message: '' });
     const navigate = useNavigate();
 
     React.useEffect(() => {
@@ -119,12 +122,12 @@ function Signin(props) {
                 localStorage.setItem('loginUser', JSON.stringify(result));
                 navigate('/dashboard/home');
             } else {
-                alert('아이디 또는 비밀번호가 틀렸습니다.');
+                setSnackbar({ open: true, message: '아이디 또는 비밀번호가 틀렸습니다.' });
             }
 
         } catch (error) {
             console.error(error);
-            alert('서버 오류 발생');
+            setSnackbar({ open: true, message: '서버 오류가 발생했습니다.' });
         }
     };
 
@@ -257,6 +260,20 @@ function Signin(props) {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     </Box>
                 </Card>
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={3000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                    <Alert
+                        onClose={() => setSnackbar({ ...snackbar, open: false })}
+                        severity="error"
+                        variant="filled"
+                    >
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
             </SignInContainer>
         </AppTheme>
     );
