@@ -2,9 +2,18 @@ import { DataGrid } from '@mui/x-data-grid';
 import { useEffect, useState } from 'react';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { Divider, useMediaQuery } from '@mui/material';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import { koKR } from '@mui/x-data-grid/locales';
@@ -36,6 +45,12 @@ export default function CustomizedDataGrid() {
   // 🔥 추가 (핵심)
   const [customerFilter, setCustomerFilter] = useState('');
 
+  // 수정 모달 상태
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editAccounts, setEditAccounts] = useState([]);
+  const [saving, setSaving] = useState(false);
+
   // 🔥 고객명 목록 생성
   const customerList = [...new Set(rows.map(r => r.customerName))];
 
@@ -64,6 +79,104 @@ export default function CustomizedDataGrid() {
       console.error(err);
     } finally {
       setLoadingAccount(false);
+    }
+  };
+
+  // 수정 버튼 클릭
+  const handleEditClick = async (e, row) => {
+    e.stopPropagation();
+    setEditForm({
+      systemID: row.systemID,
+      customerName: row.customerName || '',
+      serviceName: row.serviceName || '',
+      serviceNameMin: row.serviceNameMin || '',
+      systemName: row.systemName || '',
+      systemNameMin: row.systemNameMin || '',
+      hardwareName: row.hardwareName || '',
+      hardwareInfo: row.hardwareInfo || '',
+      osName: row.osName || '',
+      osIp: row.osIp || '',
+      osInfo: row.osInfo || '',
+    });
+
+    try {
+      const res = await fetch(`http://localhost:8080/api/account?systemId=${row.systemID}`);
+      const data = await res.json();
+      setEditAccounts(data.map((acc, idx) => ({ ...acc, _key: idx })));
+    } catch (err) {
+      console.error(err);
+      setEditAccounts([]);
+    }
+
+    setEditOpen(true);
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAccountChange = (index, field, value) => {
+    setEditAccounts((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddAccount = () => {
+    setEditAccounts((prev) => [
+      ...prev,
+      { _key: Date.now(), systemType: '', accessType: '', portNumber: '', accountId: '', accountPw: '' },
+    ]);
+  };
+
+  const handleRemoveAccount = (index) => {
+    setEditAccounts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const body = {
+        customerName: editForm.customerName,
+        serviceName: editForm.serviceName,
+        serviceNameMin: editForm.serviceNameMin,
+        systemName: editForm.systemName,
+        systemNameMin: editForm.systemNameMin,
+        hardwareName: editForm.hardwareName,
+        hardwareInfo: editForm.hardwareInfo,
+        osName: editForm.osName,
+        osIp: editForm.osIp,
+        osInfo: editForm.osInfo,
+        accounts: editAccounts.map((acc) => ({
+          id: acc.id != null ? acc.id : null,
+          systemType: acc.systemType,
+          accessType: acc.accessType,
+          portNumber: acc.portNumber,
+          accountId: acc.accountId,
+          accountPw: acc.accountPw,
+        })),
+      };
+
+      const res = await fetch(`http://localhost:8080/api/dsystem/${editForm.systemID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error('수정 실패');
+
+      // 데이터 그리드 새로고침
+      const refreshRes = await fetch('http://localhost:8080/api/dsystem');
+      const refreshData = await refreshRes.json();
+      setRows(refreshData.map((item, index) => ({ id: index, ...item })));
+
+      setEditOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('수정에 실패했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -104,6 +217,18 @@ export default function CustomizedDataGrid() {
     { field: 'hardwareName', headerName: '하드웨어', flex: 1, sortable: false, filterable: false },
     { field: 'osName', headerName: 'OS', flex: 1, sortable: false, filterable: false },
     { field: 'osIp', headerName: 'IP', flex: 1, sortable: false, filterable: false },
+    {
+      field: 'actions',
+      headerName: '수정',
+      width: 70,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <IconButton size="small" onClick={(e) => handleEditClick(e, params.row)}>
+          <EditIcon fontSize="small" />
+        </IconButton>
+      ),
+    },
   ];
 
   const mobileColumns = [
@@ -145,7 +270,19 @@ export default function CustomizedDataGrid() {
           </div>
         </div>
       )
-    }
+    },
+    {
+      field: 'actions',
+      headerName: '수정',
+      width: 50,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <IconButton size="small" onClick={(e) => handleEditClick(e, params.row)}>
+          <EditIcon fontSize="small" />
+        </IconButton>
+      ),
+    },
   ];
 
   useEffect(() => {
@@ -232,6 +369,53 @@ export default function CustomizedDataGrid() {
             </Table>
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* 수정 다이얼로그 */}
+      <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>고객 정보 수정</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+            <TextField label="고객명" size="small" value={editForm.customerName || ''} onChange={(e) => handleEditFormChange('customerName', e.target.value)} />
+            <TextField label="서비스명" size="small" value={editForm.serviceNameMin || ''} onChange={(e) => handleEditFormChange('serviceNameMin', e.target.value)} />
+            <TextField label="시스템명" size="small" value={editForm.systemNameMin || ''} onChange={(e) => handleEditFormChange('systemNameMin', e.target.value)} />
+            <TextField label="하드웨어명" size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
+            <TextField label="OS명" size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
+            <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <TextField label="하드웨어 정보" size="small" fullWidth multiline rows={2} value={editForm.hardwareInfo || ''} onChange={(e) => handleEditFormChange('hardwareInfo', e.target.value)} />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <TextField label="OS 정보" size="small" fullWidth multiline rows={2} value={editForm.osInfo || ''} onChange={(e) => handleEditFormChange('osInfo', e.target.value)} />
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600}>계정 정보</Typography>
+            <Button size="small" startIcon={<AddIcon />} onClick={handleAddAccount}>추가</Button>
+          </Box>
+
+          {editAccounts.map((acc, idx) => (
+            <Box key={acc._key ?? idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+              <TextField label="구분" size="small" value={acc.systemType || ''} onChange={(e) => handleAccountChange(idx, 'systemType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="접속방식" size="small" value={acc.accessType || ''} onChange={(e) => handleAccountChange(idx, 'accessType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="포트" size="small" value={acc.portNumber || ''} onChange={(e) => handleAccountChange(idx, 'portNumber', e.target.value)} sx={{ flex: 0.7 }} />
+              <TextField label="계정명" size="small" value={acc.accountId || ''} onChange={(e) => handleAccountChange(idx, 'accountId', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="패스워드" size="small" value={acc.accountPw || ''} onChange={(e) => handleAccountChange(idx, 'accountPw', e.target.value)} sx={{ flex: 1 }} />
+              <IconButton size="small" color="error" onClick={() => handleRemoveAccount(idx)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)}>취소</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving}>
+            {saving ? '저장 중...' : '저장'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </>
   );

@@ -1,11 +1,11 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.DSystemAccountDto;
-import com.example.backend.repository.DSystemAccountRepository;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.example.backend.dto.DSystemAccountDto;
+import com.example.backend.repository.DSystemAccountRepository;
 
 @Service
 public class DSystemAccountService {
@@ -20,6 +20,7 @@ public class DSystemAccountService {
         return repository.findBySystemId(systemId)
                 .stream()
                 .map(acc -> new DSystemAccountDto(
+                        acc.getId(),
                         acc.getSystemType(),
                         acc.getAccessType(),
                         acc.getPortNumber(),
