@@ -11,7 +11,7 @@ export default function CreateWorkHistory() {
     const [form, setForm] = useState({
         workType: '',
         issue: '',
-        equipment: ''
+        systemIds: []
     });
 
     // ✅ 파일 state 추가
@@ -40,7 +40,7 @@ export default function CreateWorkHistory() {
     }, []);
 
     const handleSubmit = async () => {
-        if (!form.systemId) {
+        if (form.workType !== '정기점검' && (!form.systemIds || form.systemIds.length === 0)) {
             setSnackbar({ open: true, message: '시스템을 선택하세요', severity: 'warning' });
             return;
         }
@@ -48,40 +48,39 @@ export default function CreateWorkHistory() {
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
 
-        const body = {
-            ...form,
-            systemId: Number(form.systemId),
-            region: customerName,
-            serviceName: serviceName,
-            workerId: user.id,
-            createdBy: user.id
-        };
+        const systemIds = form.workType === '정기점검' ? [null] : form.systemIds;
 
         try {
-            // ✅ FormData 생성
-            const formData = new FormData();
+            for (const systemId of systemIds) {
+                const body = {
+                    ...form,
+                    systemId: systemId ? Number(systemId) : null,
+                    region: customerName,
+                    serviceName: serviceName,
+                    workerId: user.id,
+                    createdBy: user.id
+                };
+                delete body.systemIds;
 
-            // JSON 데이터 추가
-            formData.append(
-                "data",
-                new Blob([JSON.stringify(body)], { type: "application/json" })
-            );
+                const formData = new FormData();
+                formData.append(
+                    "data",
+                    new Blob([JSON.stringify(body)], { type: "application/json" })
+                );
+                files.forEach(file => {
+                    formData.append("files", file);
+                });
 
-            // 파일 추가
-            files.forEach(file => {
-                formData.append("files", file);
-            });
+                const res = await fetch('http://localhost:8080/api/history/with-files', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            // ✅ multipart 요청
-            const res = await fetch('http://localhost:8080/api/history/with-files', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                setSnackbar({ open: true, message: '등록 실패: ' + text, severity: 'error' });
-                return;
+                if (!res.ok) {
+                    const text = await res.text();
+                    setSnackbar({ open: true, message: '등록 실패: ' + text, severity: 'error' });
+                    return;
+                }
             }
 
             navigate('/dashboard/workhistory');

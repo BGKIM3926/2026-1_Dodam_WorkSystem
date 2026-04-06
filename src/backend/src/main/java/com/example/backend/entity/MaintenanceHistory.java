@@ -1,11 +1,17 @@
 package com.example.backend.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDate;
+
+import org.hibernate.annotations.CreationTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.LocalDate;
-import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "maintenance_history")
@@ -20,6 +26,8 @@ public class MaintenanceHistory {
     private Long systemId;
 
     private String region;
+
+    private String serviceName;
 
     @CreationTimestamp
     @Column(name = "visit_date", updatable = false)
@@ -39,6 +47,15 @@ public class MaintenanceHistory {
     private String support;
 
     private String equipment;
+
+    @Column(columnDefinition = "TEXT")
+    private String issueDetail;
+
+    private LocalDate completedDate;
+
+    private LocalDate constructionStartDate;
+
+    private LocalDate constructionEndDate;
 
     private String createdBy;
 }

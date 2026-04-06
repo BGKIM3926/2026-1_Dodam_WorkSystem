@@ -1,28 +1,21 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
+import Box from '@mui/material/Box';
+import Collapse from '@mui/material/Collapse';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Stack from '@mui/material/Stack';
-import Collapse from '@mui/material/Collapse';
-import Box from '@mui/material/Box';
 
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import AnalyticsRoundedIcon from '@mui/icons-material/AnalyticsRounded';
-import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
+import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
 import WorkRoundedIcon from '@mui/icons-material/WorkRounded';
 
 import DynamicTreeMenu from './DynamicTreeMenu';
 
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
-import { Divider } from '@mui/material';
 
 
 
@@ -133,8 +126,7 @@ export default function MenuContent({ treeData }) {
         <ListItemButton
           selected={location.pathname.includes('workhistory')}
           onClick={() => {
-            setSelectedNode(null);
-            navigate('/dashboard/workhistory');
+            setOpen((prev) => !prev);
           }}
           sx={{
             borderRadius: 2,

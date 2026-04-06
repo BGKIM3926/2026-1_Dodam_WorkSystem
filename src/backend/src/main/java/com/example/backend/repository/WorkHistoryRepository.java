@@ -19,17 +19,21 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                     m.historyId,
                     m.workType,
                     m.issue,
+                    m.issueDetail,
                     m.equipment,
                     u.name,
                     m.region,
-                    d.serviceNameMin,
-                    d.systemNameMin,
-                    m.visitDate
+                    COALESCE(d.serviceNameMin, m.serviceName),
+                    COALESCE(d.systemNameMin, ''),
+                    m.visitDate,
+                    m.completedDate,
+                    m.constructionStartDate,
+                    m.constructionEndDate
                 )
                 FROM MaintenanceHistory m
                 JOIN User u ON m.workerId = u.id
-                JOIN DSystem d ON m.systemId = d.systemId
-                WHERE d.serviceNameMin = :serviceName
+                LEFT JOIN DSystem d ON m.systemId = d.systemId
+                WHERE m.serviceName = :serviceName OR d.serviceNameMin = :serviceName
                 ORDER BY m.visitDate DESC, m.historyId DESC
             """)
     List<WorkHistoryResponseDto> findWithUserName(String serviceName);
@@ -39,16 +43,20 @@ public interface WorkHistoryRepository extends JpaRepository<MaintenanceHistory,
                     m.historyId,
                     m.workType,
                     m.issue,
+                    m.issueDetail,
                     m.equipment,
                     u.name,
                     m.region,
-                    d.serviceNameMin,
-                    d.systemNameMin,
-                    m.visitDate
+                    COALESCE(d.serviceNameMin, m.serviceName),
+                    COALESCE(d.systemNameMin, ''),
+                    m.visitDate,
+                    m.completedDate,
+                    m.constructionStartDate,
+                    m.constructionEndDate
                 )
                 FROM MaintenanceHistory m
                 JOIN User u ON m.workerId = u.id
-                JOIN DSystem d ON m.systemId = d.systemId
+                LEFT JOIN DSystem d ON m.systemId = d.systemId
                 ORDER BY m.visitDate DESC, m.historyId DESC
             """)
     List<WorkHistoryResponseDto> findAllWithUserName();

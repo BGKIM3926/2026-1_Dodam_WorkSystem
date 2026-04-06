@@ -18,4 +18,5 @@ public class DSystemDto {
     private String osName;
     private String osIp;
     private String osInfo;
+    private Long serviceId;
 }

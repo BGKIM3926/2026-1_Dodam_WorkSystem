@@ -86,7 +86,7 @@ export default function CustomizedDataGrid() {
             sx={{ fontSize: 14 }}
           >
             <MenuItem value="">
-              <em>고객명</em>
+              <em>사이트명</em>
             </MenuItem>
 
             {customerList.map((customer) => (
@@ -123,7 +123,7 @@ export default function CustomizedDataGrid() {
             sx={{ fontSize: 14 }}
           >
             <MenuItem value="">
-              <em>고객명</em>
+              <em>사이트명</em>
             </MenuItem>
 
             {customerList.map((customer) => (
@@ -179,6 +179,7 @@ export default function CustomizedDataGrid() {
         disableColumnResize
         disableColumnFilter   // 🔥 기본 필터 제거
         density="compact"
+        rowHeight={52}
       />
 
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth>
@@ -209,11 +210,11 @@ export default function CustomizedDataGrid() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>구분</TableCell>
-                  <TableCell>접속방식</TableCell>
-                  <TableCell>포트</TableCell>
-                  <TableCell>계정명</TableCell>
-                  <TableCell>패스워드</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>구분</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>접속방식</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>포트</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>계정명</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>패스워드</TableCell>
                 </TableRow>
               </TableHead>
 

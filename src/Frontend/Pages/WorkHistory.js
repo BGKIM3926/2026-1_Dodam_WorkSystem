@@ -1,4 +1,6 @@
+import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,32 +12,55 @@ import HistoryList from './components/HistoryList';
 
 export default function WorkHistory() {
     const [rows, setRows] = useState([]);
+    const [managerRows, setManagerRows] = useState([]);
     const { selectedNode } = useSelectedNode();
     const navigate = useNavigate();
-    const [filter, setFilter] = useState('전체');
+    const [filter, setFilter] = useState('정기점검');
     const isGlobalView = !selectedNode?.serviceName;
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
+    const [serviceId, setServiceId] = useState(null);
 
     const fetchRows = () => {
-        if (selectedNode?.serviceName) {
-            fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
-                .then((res) => res.json())
-                .then((data) => setRows(data))
-                .catch((err) => console.error(err));
+        if (!selectedNode?.serviceName) {
+            setRows([]);
             return;
         }
 
-        fetch('http://localhost:8080/api/history/all')
+        fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
             .then((res) => res.json())
             .then((data) => setRows(data))
             .catch((err) => console.error(err));
     };
 
+    const fetchServiceId = () => {
+        if (!selectedNode?.serviceName) return;
+
+        fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${selectedNode.serviceName}&customerName=${selectedNode.customerName}`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.length > 0 && data[0].serviceId) {
+                    setServiceId(data[0].serviceId);
+                }
+            })
+            .catch((err) => console.error(err));
+    };
+
+    const fetchManagers = () => {
+        if (!serviceId) {
+            setManagerRows([]);
+            return;
+        }
+
+        fetch(`http://localhost:8080/api/service-manager?serviceId=${serviceId}`)
+            .then((res) => res.json())
+            .then((data) => setManagerRows(data))
+            .catch((err) => console.error(err));
+    };
+
     const filteredRows = rows.filter(row => {
         // 1. workType 필터
-        const matchType =
-            filter === '전체' || row.workType === filter;
+        const matchType = row.workType === filter;
 
         // 2. 날짜 필터 (visitDate 없으면 통과)
         const rowDate = row.visitDate ? dayjs(row.visitDate) : null;
@@ -52,7 +77,14 @@ export default function WorkHistory() {
     useEffect(() => {
         console.log('selectedNode:', selectedNode);
         fetchRows();
+        fetchServiceId();
     }, [selectedNode]);
+
+    useEffect(() => {
+        if (filter === '기관정보') {
+            fetchManagers();
+        }
+    }, [filter, serviceId]);
 
     useEffect(() => {
         const user = localStorage.getItem('loginUser');
@@ -70,15 +102,30 @@ export default function WorkHistory() {
                 disableGutters
                 sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
                 <HistoryHeader selectedNode={selectedNode} rows={rows} />
-                <HistoryActions 
-                    filter={filter} 
-                    setFilter={setFilter} 
-                    isGlobalView={isGlobalView} 
-                    startDate={startDate}
-                    setStartDate={setStartDate}
-                    endDate={endDate}
-                    setEndDate={setEndDate} />
-                <HistoryList rows={filteredRows} isGlobalView={isGlobalView} onRefresh={fetchRows} />
+                {isGlobalView ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
+                        <Typography variant="h6" color="text.secondary">
+                            좌측 메뉴에서 사이트 / 서비스를 선택해주세요
+                        </Typography>
+                    </Box>
+                ) : (
+                    <>
+                        <HistoryActions 
+                            filter={filter} 
+                            setFilter={setFilter} 
+                            isGlobalView={isGlobalView} 
+                            startDate={startDate}
+                            setStartDate={setStartDate}
+                            endDate={endDate}
+                            setEndDate={setEndDate} />
+                        <HistoryList 
+                            rows={filter === '기관정보' ? managerRows : filteredRows} 
+                            isGlobalView={isGlobalView} 
+                            onRefresh={filter === '기관정보' ? fetchManagers : fetchRows} 
+                            filter={filter} 
+                        />
+                    </>
+                )}
             </Container>
 
             

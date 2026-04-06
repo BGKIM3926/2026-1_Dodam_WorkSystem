@@ -1,11 +1,11 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.DSystemDto;
-import com.example.backend.repository.DSystemRepository;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.example.backend.dto.DSystemDto;
+import com.example.backend.repository.DSystemRepository;
 
 @Service
 public class DSystemService {
@@ -31,6 +31,7 @@ public class DSystemService {
             dto.setOsName(entity.getOsName());
             dto.setOsIp(entity.getOsIp());
             dto.setOsInfo(entity.getOsInfo());
+            dto.setServiceId(entity.getServiceId());
 
             return dto;
         }).toList();
@@ -54,6 +55,7 @@ public class DSystemService {
                     dto.setOsName(entity.getOsName());
                     dto.setOsIp(entity.getOsIp());
                     dto.setOsInfo(entity.getOsInfo());
+                    dto.setServiceId(entity.getServiceId());
 
                     return dto;
                 })

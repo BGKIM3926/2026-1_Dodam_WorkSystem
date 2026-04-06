@@ -53,12 +53,6 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                     overflow: 'auto'
                 }}
             >
-                <Chip
-                    onClick={() => setFilter('전체')}
-                    color={filter === '전체' ? 'primary' : 'default'}
-                    size="large"
-                    label="전체"
-                />
                 <Chip 
                     onClick={() => setFilter('정기점검')} 
                     color={filter === '정기점검' ? 'primary' : 'default'}
@@ -82,6 +76,12 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                     color={filter === '구축' ? 'primary' : 'default'}
                     size="large"
                     label="구축"
+                />
+                <Chip
+                    onClick={() => setFilter('기관정보')}
+                    color={filter === '기관정보' ? 'primary' : 'default'}
+                    size="large"
+                    label="기관정보"
                 />
             </Box>
             
@@ -180,12 +180,14 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                                 return;
                             }
 
-                            navigate(
-                                `/dashboard/workhistory/createWorkHistory`
-                            );
+                            if (filter === '기관정보') {
+                                navigate('/dashboard/workhistory/createServiceManager');
+                            } else {
+                                navigate('/dashboard/workhistory/createWorkHistory');
+                            }
                         }}
                     >
-                        이력 등록
+                        {filter === '기관정보' ? '정보 등록' : '이력 등록'}
                     </Button>
                 )}
             </Box>

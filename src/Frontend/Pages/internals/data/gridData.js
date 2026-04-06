@@ -76,7 +76,7 @@ export function renderAvatar(params) {
 export const columns = [
   {
     field: 'customerName',
-    headerName: '고객명',
+    headerName: '사이트명',
     flex: 1,
   },
   { field: 'serviceName', headerName: '서비스명', flex: 1 },

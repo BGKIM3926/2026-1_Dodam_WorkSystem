@@ -7,6 +7,7 @@ import Signin from './Frontend/Pages/Signin';
 import Task from './Frontend/Pages/Task';
 import UsersPage from './Frontend/Pages/UsersPage';
 import WorkHistory from './Frontend/Pages/WorkHistory';
+import CreateServiceManager from './Frontend/Pages/components/CreateServiceManager';
 import CreateUser from './Frontend/Pages/components/CreateUser';
 import CreateWorkHistory from './Frontend/Pages/components/CreateWorkHistory';
 import './index.css';
@@ -24,6 +25,7 @@ root.render(
           <Route path="task" element={<Task />} />
           <Route path="workhistory" element={<WorkHistory />} />
           <Route path="workhistory/createWorkHistory" element={<CreateWorkHistory />} />
+          <Route path="workhistory/createServiceManager" element={<CreateServiceManager />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="users/create" element={<CreateUser />} />
         </Route>

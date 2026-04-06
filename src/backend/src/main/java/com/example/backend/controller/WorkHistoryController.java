@@ -76,6 +76,9 @@ public class WorkHistoryController {
         history.setWorkType(request.getWorkType());
         history.setIssue(request.getIssue());
         history.setEquipment(request.getEquipment());
+        history.setCompletedDate(request.getCompletedDate());
+        history.setConstructionStartDate(request.getConstructionStartDate());
+        history.setConstructionEndDate(request.getConstructionEndDate());
 
         return service.save(history);
     }
