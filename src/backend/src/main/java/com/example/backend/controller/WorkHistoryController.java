@@ -42,7 +42,12 @@ public class WorkHistoryController {
     }
 
     @GetMapping
-    public List<WorkHistoryResponseDto> getHistory(@RequestParam String serviceName) {
+    public List<WorkHistoryResponseDto> getHistory(
+            @RequestParam(required = false) String serviceName,
+            @RequestParam(required = false) Long serviceId) {
+        if (serviceId != null) {
+            return service.getHistoryByServiceId(serviceId);
+        }
         return service.getHistoryByService(serviceName);
     }
 

@@ -29,6 +29,22 @@ public class WorkHistoryService {
         this.attachmentRepository = attachmentRepository;
     }
 
+    public List<WorkHistoryResponseDto> getHistoryByServiceId(Long serviceId) {
+        List<WorkHistoryResponseDto> list = repository.findWithUserNameByServiceId(serviceId);
+
+        for (WorkHistoryResponseDto dto : list) {
+            List<Attachment> files = attachmentRepository.findByHistoryId(dto.getHistoryId());
+
+            List<AttachmentDto> fileDtos = files.stream()
+                    .map(f -> new AttachmentDto(f.getAttachmentId(), f.getFileName()))
+                    .toList();
+
+            dto.setAttachments(fileDtos);
+        }
+
+        return list;
+    }
+
     public List<WorkHistoryResponseDto> getHistoryByService(String serviceName) {
 
         // 1️⃣ 기존 이력 조회

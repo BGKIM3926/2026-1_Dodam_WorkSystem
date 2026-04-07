@@ -27,7 +27,11 @@ export default function WorkHistory() {
             return;
         }
 
-        fetch(`http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`)
+        const url = serviceId
+            ? `http://localhost:8080/api/history?serviceId=${serviceId}`
+            : `http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`;
+
+        fetch(url)
             .then((res) => res.json())
             .then((data) => setRows(data))
             .catch((err) => console.error(err));
@@ -79,6 +83,12 @@ export default function WorkHistory() {
         fetchRows();
         fetchServiceId();
     }, [selectedNode]);
+
+    useEffect(() => {
+        if (serviceId) {
+            fetchRows();
+        }
+    }, [serviceId]);
 
     useEffect(() => {
         if (filter === '기관정보') {

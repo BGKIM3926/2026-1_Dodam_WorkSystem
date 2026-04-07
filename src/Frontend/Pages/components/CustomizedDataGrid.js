@@ -224,9 +224,11 @@ export default function CustomizedDataGrid() {
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <IconButton size="small" onClick={(e) => handleEditClick(e, params.row)}>
-          <EditIcon fontSize="small" />
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+          <IconButton size="small" sx={{ border: 'none' }} onClick={(e) => handleEditClick(e, params.row)}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Box>
       ),
     },
   ];
@@ -260,13 +262,15 @@ export default function CustomizedDataGrid() {
         </FormControl>
       ),
       renderCell: (params) => (
-        <div style={{ lineHeight: 1.4 }}>
-          <div style={{ fontWeight: 600 }}>
-            {params.row.customerName}
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+          <div style={{ lineHeight: 1.4 }}>
+            <div style={{ fontWeight: 600 }}>
+              {params.row.customerName}
+            </div>
 
-          <div style={{ fontSize: 12, color: '#666' }}>
-            {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp}
+            <div style={{ fontSize: 12, color: '#666' }}>
+              {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp}
+            </div>
           </div>
         </div>
       )
@@ -278,9 +282,11 @@ export default function CustomizedDataGrid() {
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <IconButton size="small" onClick={(e) => handleEditClick(e, params.row)}>
-          <EditIcon fontSize="small" />
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+          <IconButton size="small" sx={{ border: 'none' }} onClick={(e) => handleEditClick(e, params.row)}>
+            <EditIcon fontSize="small" />
+          </IconButton>
+        </Box>
       ),
     },
   ];
@@ -315,7 +321,6 @@ export default function CustomizedDataGrid() {
         pageSizeOptions={[10, 20, 50]}
         disableColumnResize
         disableColumnFilter   // 🔥 기본 필터 제거
-        density="compact"
         rowHeight={52}
       />
 

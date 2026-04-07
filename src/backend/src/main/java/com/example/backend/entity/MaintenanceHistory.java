@@ -25,6 +25,8 @@ public class MaintenanceHistory {
 
     private Long systemId;
 
+    private Long serviceId;
+
     private String region;
 
     private String serviceName;

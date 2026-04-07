@@ -21,13 +21,19 @@ export default function CreateWorkHistory() {
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
     const [systems, setSystems] = useState([]);
+    const [serviceId, setServiceId] = useState(null);
 
     useEffect(() => {
         if (!serviceName) return;
 
         fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
             .then(res => res.json())
-            .then(data => setSystems(data))
+            .then(data => {
+                setSystems(data);
+                if (data.length > 0 && data[0].serviceId) {
+                    setServiceId(data[0].serviceId);
+                }
+            })
             .catch(err => console.error(err));
 
     }, [serviceName]);
@@ -55,6 +61,7 @@ export default function CreateWorkHistory() {
                 const body = {
                     ...form,
                     systemId: systemId ? Number(systemId) : null,
+                    serviceId: serviceId ? Number(serviceId) : null,
                     region: customerName,
                     serviceName: serviceName,
                     workerId: user.id,
