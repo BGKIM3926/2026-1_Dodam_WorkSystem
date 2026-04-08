@@ -50,7 +50,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                     display: 'flex', 
                     gap: 1, 
                     flexWrap: 'nowrap',
-                    overflow: 'auto'
+                    overflow: 'visible'
                 }}
             >
                 <Chip 
@@ -109,7 +109,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
 
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 2 }, alignItems: 'stretch' }}>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '150px' } }}>
+                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' } }}>
                             <DatePicker
                                 label='시작일'
                                 value={startDate}
@@ -119,7 +119,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                                     textField: {
                                         size: 'medium',
                                         fullWidth: true,
-                                        sx: { minWidth: '140px' }
+                                        sx: { minWidth: '120px' }
                                     },
                                     openPickerButton: {
                                         sx: {
@@ -134,7 +134,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                                 }}
                             />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '150px' } }}>
+                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' } }}>
                             <DatePicker
                                 label='종료일'
                                 value={endDate}
@@ -150,7 +150,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                                     textField: {
                                         size: 'medium',
                                         fullWidth: true,
-                                        sx: { minWidth: '140px' }
+                                        sx: { minWidth: '120px' }
                                     },
                                     openPickerButton: {
                                         sx: {

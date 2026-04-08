@@ -19,6 +19,8 @@ public class Attachment {
 
     private Long historyId;
 
+    private Long subId;
+
     private String fileName;
 
     private String filePath;

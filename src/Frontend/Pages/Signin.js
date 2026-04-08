@@ -7,7 +7,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormLabel from '@mui/material/FormLabel';
-import Link from '@mui/material/Link';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import { styled } from '@mui/material/styles';
@@ -247,15 +246,6 @@ function Signin(props) {
                         >
                             로그인
                         </Button>
-                        <Link
-                            component="button"
-                            type="button"
-                            onClick={handleClickOpen}
-                            variant="body2"
-                            sx={{ alignSelf: 'center' }}
-                        >
-                            비밀번호 찾기
-                        </Link>
                     </Box> 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     </Box>

@@ -1,21 +1,19 @@
-import { alpha } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
+import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
+import { alpha } from '@mui/material/styles';
+import { useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { SelectedNodeProvider } from '../Contexts/SelectedNodeContext';
 import AppNavbar from './components/AppNavbar';
-import Header from './components/Header';
 import SideMenu from './components/SideMenu';
 import AppTheme from './shared-theme/AppTheme';
-import { Outlet } from 'react-router-dom';
 import {
-  chartsCustomizations,
-  dataGridCustomizations,
-  datePickersCustomizations,
-  treeViewCustomizations,
+    chartsCustomizations,
+    dataGridCustomizations,
+    datePickersCustomizations,
+    treeViewCustomizations,
 } from './theme/customizations';
-import { SelectedNodeProvider } from '../Contexts/SelectedNodeContext';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -51,6 +49,7 @@ export default function Dashboard(props) {
                 ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
                 : alpha(theme.palette.background.default, 1),
               overflow: 'auto',
+              overflowY: 'overlay',
             })}
           >
             <Stack

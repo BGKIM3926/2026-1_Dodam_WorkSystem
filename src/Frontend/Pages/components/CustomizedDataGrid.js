@@ -381,18 +381,15 @@ export default function CustomizedDataGrid() {
         <DialogTitle>고객 정보 수정</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
-            <TextField label="고객명" size="small" value={editForm.customerName || ''} onChange={(e) => handleEditFormChange('customerName', e.target.value)} />
-            <TextField label="서비스명" size="small" value={editForm.serviceNameMin || ''} onChange={(e) => handleEditFormChange('serviceNameMin', e.target.value)} />
-            <TextField label="시스템명" size="small" value={editForm.systemNameMin || ''} onChange={(e) => handleEditFormChange('systemNameMin', e.target.value)} />
             <TextField label="하드웨어명" size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
             <TextField label="OS명" size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
             <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
           </Box>
           <Box sx={{ mt: 2 }}>
-            <TextField label="하드웨어 정보" size="small" fullWidth multiline rows={2} value={editForm.hardwareInfo || ''} onChange={(e) => handleEditFormChange('hardwareInfo', e.target.value)} />
+            <TextField label="하드웨어 정보" size="small" fullWidth multiline rows={2} value={editForm.hardwareInfo || ''} onChange={(e) => handleEditFormChange('hardwareInfo', e.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }} />
           </Box>
           <Box sx={{ mt: 2 }}>
-            <TextField label="OS 정보" size="small" fullWidth multiline rows={2} value={editForm.osInfo || ''} onChange={(e) => handleEditFormChange('osInfo', e.target.value)} />
+            <TextField label="OS 정보" size="small" fullWidth multiline rows={2} value={editForm.osInfo || ''} onChange={(e) => handleEditFormChange('osInfo', e.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }} />
           </Box>
 
           <Divider sx={{ my: 2 }} />
