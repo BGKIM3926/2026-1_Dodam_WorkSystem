@@ -18,7 +18,7 @@ import com.example.backend.service.DSystemService;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class DSystemController {
 
     private final DSystemService service;

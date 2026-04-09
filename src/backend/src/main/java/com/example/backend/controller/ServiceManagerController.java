@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.backend.entity.ServiceManager;
 import com.example.backend.repository.ServiceManagerRepository;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/service-manager")
 public class ServiceManagerController {

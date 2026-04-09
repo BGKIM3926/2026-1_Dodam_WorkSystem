@@ -29,7 +29,7 @@ export default function UsersList({ rows, fetchUsers }) {
     const handleUpdate = async () => {
         console.log('🔥 update form:', form);
 
-        await fetch(`http://localhost:8080/api/users/${selectedRow.id}`, {
+        await fetch(`/api/users/${selectedRow.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -46,7 +46,7 @@ export default function UsersList({ rows, fetchUsers }) {
 
     // 🔥 삭제
     const handleDelete = async () => {
-        await fetch(`http://localhost:8080/api/users/${selectedRow.id}`, {
+        await fetch(`/api/users/${selectedRow.id}`, {
             method: 'DELETE'
         });
 

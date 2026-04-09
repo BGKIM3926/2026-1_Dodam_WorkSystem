@@ -19,7 +19,7 @@ import com.example.backend.dto.HistorySubResponseDto;
 import com.example.backend.entity.HistorySub;
 import com.example.backend.service.HistorySubService;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/history-sub")
 public class HistorySubController {

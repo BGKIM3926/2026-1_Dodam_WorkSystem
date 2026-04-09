@@ -28,7 +28,7 @@ import com.example.backend.entity.MaintenanceHistory;
 import com.example.backend.repository.AttachmentRepository;
 import com.example.backend.service.WorkHistoryService;
 
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/history")
 public class WorkHistoryController {

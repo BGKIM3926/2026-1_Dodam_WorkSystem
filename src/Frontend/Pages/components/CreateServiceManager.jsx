@@ -28,7 +28,7 @@ export default function CreateServiceManager() {
             return;
         }
 
-        fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
+        fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
             .then(res => res.json())
             .then(data => {
                 if (data.length > 0 && data[0].serviceId) {
@@ -55,7 +55,7 @@ export default function CreateServiceManager() {
                 serviceId: serviceId,
             };
 
-            const res = await fetch('http://localhost:8080/api/service-manager', {
+            const res = await fetch('/api/service-manager', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),

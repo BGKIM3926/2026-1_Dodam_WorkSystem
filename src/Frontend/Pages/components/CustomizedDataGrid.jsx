@@ -70,7 +70,7 @@ export default function CustomizedDataGrid() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/api/account?systemId=${systemId}`
+        `/api/account?systemId=${systemId}`
       );
 
       const data = await res.json();
@@ -100,7 +100,7 @@ export default function CustomizedDataGrid() {
     });
 
     try {
-      const res = await fetch(`http://localhost:8080/api/account?systemId=${row.systemID}`);
+      const res = await fetch(`/api/account?systemId=${row.systemID}`);
       const data = await res.json();
       setEditAccounts(data.map((acc, idx) => ({ ...acc, _key: idx })));
     } catch (err) {
@@ -158,7 +158,7 @@ export default function CustomizedDataGrid() {
         })),
       };
 
-      const res = await fetch(`http://localhost:8080/api/dsystem/${editForm.systemID}`, {
+      const res = await fetch(`/api/dsystem/${editForm.systemID}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -167,7 +167,7 @@ export default function CustomizedDataGrid() {
       if (!res.ok) throw new Error('수정 실패');
 
       // 데이터 그리드 새로고침
-      const refreshRes = await fetch('http://localhost:8080/api/dsystem');
+      const refreshRes = await fetch('/api/dsystem');
       const refreshData = await refreshRes.json();
       setRows(refreshData.map((item, index) => ({ id: index, ...item })));
 
@@ -292,7 +292,7 @@ export default function CustomizedDataGrid() {
   ];
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/dsystem')
+    fetch('/api/dsystem')
       .then((res) => res.json())
       .then((data) => {
         const mapped = data.map((item, index) => ({

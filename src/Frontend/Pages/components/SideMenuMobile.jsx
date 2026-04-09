@@ -26,7 +26,7 @@ function SideMenuMobile({ open, toggleDrawer }) {
 
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/dsystem')
+    fetch('/api/dsystem')
       .then((res) => res.json())
       .then((data) => {
         const tree = buildTree(data);

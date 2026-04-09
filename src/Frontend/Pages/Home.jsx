@@ -15,6 +15,7 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
+    Pagination,
     Table,
     TableBody,
     TableCell,
@@ -25,6 +26,7 @@ import {
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelectedNode } from '../Contexts/SelectedNodeContext';
 
 const workTypeColor = {
     '정기점검': 'info',
@@ -44,7 +46,10 @@ export default function Home() {
     const [summary, setSummary] = useState({});
     const [missingInspections, setMissingInspections] = useState([]);
     const [recentHistory, setRecentHistory] = useState([]);
+    const [inspectionPage, setInspectionPage] = useState(1);
+    const inspectionRowsPerPage = 10;
     const navigate = useNavigate();
+    const { setSelectedNode } = useSelectedNode();
 
     useEffect(() => {
         const user = localStorage.getItem('loginUser');
@@ -54,21 +59,37 @@ export default function Home() {
         const workerId = parsed.id || parsed.userId;
         if (!workerId) return;
 
-        fetch(`http://localhost:8080/api/stats/summary?workerId=${workerId}`)
+        fetch(`/api/stats/summary?workerId=${workerId}`)
             .then(res => res.json())
             .then(data => setSummary(data))
             .catch(console.error);
 
-        fetch(`http://localhost:8080/api/stats/missing-inspections?workerId=${workerId}`)
+        fetch(`/api/stats/missing-inspections?workerId=${workerId}`)
             .then(res => res.json())
             .then(data => setMissingInspections(data))
             .catch(console.error);
 
-        fetch(`http://localhost:8080/api/stats/recent?workerId=${workerId}`)
+        fetch(`/api/stats/recent?workerId=${workerId}`)
             .then(res => res.json())
             .then(data => setRecentHistory(data))
             .catch(console.error);
     }, []);
+
+    const handleMissingInspectionRowClick = (row) => {
+        const customerName = row.region;
+        const serviceName = row.serviceName;
+
+        if (!customerName || !serviceName) return;
+
+        setSelectedNode({ customerName, serviceName });
+
+        const params = new URLSearchParams({
+            customerName,
+            serviceName,
+        });
+
+        navigate(`/dashboard/workhistory?${params.toString()}`);
+    };
 
     const statCards = [
         {
@@ -111,7 +132,7 @@ export default function Home() {
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4, justifyContent: 'flex-start' }}>
                 <Typography variant="h2" gutterBottom>
-                    대시보드
+                    홈
                 </Typography>
             </Box>
 
@@ -162,21 +183,32 @@ export default function Home() {
                     </Box>
                     <Divider />
                     {missingInspections.length > 0 ? (
+                        <>
                         <TableContainer>
                             <Table size="small">
                                 <TableHead>
                                     <TableRow sx={{ backgroundColor: 'error.50' }}>
-                                        <TableCell sx={{ fontWeight: 700 }}>사이트명</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>서비스명</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>최근 점검일</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 140 }}>사이트명</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 180 }}>서비스명</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 160 }}>최근 점검일</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {missingInspections.map((row, idx) => (
-                                        <TableRow key={idx} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
-                                            <TableCell>{row.region || '-'}</TableCell>
-                                            <TableCell>{row.serviceName || '-'}</TableCell>
-                                            <TableCell>
+                                    {missingInspections
+                                        .slice((inspectionPage - 1) * inspectionRowsPerPage, inspectionPage * inspectionRowsPerPage)
+                                        .map((row, idx) => (
+                                        <TableRow
+                                            key={idx}
+                                            hover
+                                            onClick={() => handleMissingInspectionRowClick(row)}
+                                            sx={{
+                                                cursor: row.region && row.serviceName ? 'pointer' : 'default',
+                                                '&:hover': { backgroundColor: 'action.hover' }
+                                            }}
+                                        >
+                                            <TableCell sx={{ px: 3, py: 1.5 }}>{row.region || '-'}</TableCell>
+                                            <TableCell sx={{ px: 3, py: 1.5 }}>{row.serviceName || '-'}</TableCell>
+                                            <TableCell sx={{ px: 3, py: 1.5 }}>
                                                 {row.lastInspectionDate ? (
                                                     <Typography variant="body2">{row.lastInspectionDate}</Typography>
                                                 ) : (
@@ -188,6 +220,18 @@ export default function Home() {
                                 </TableBody>
                             </Table>
                         </TableContainer>
+                        {Math.ceil(missingInspections.length / inspectionRowsPerPage) > 1 && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                <Pagination
+                                    count={Math.ceil(missingInspections.length / inspectionRowsPerPage)}
+                                    page={inspectionPage}
+                                    onChange={(e, page) => setInspectionPage(page)}
+                                    color="primary"
+                                    size="small"
+                                />
+                            </Box>
+                        )}
+                        </>
                     ) : (
                         <Box sx={{ px: 3, py: 4, textAlign: 'center' }}>
                             <CheckCircleOutlineIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
@@ -214,9 +258,9 @@ export default function Home() {
                                 <ListItem
                                     key={item.historyId}
                                     divider={idx < recentHistory.length - 1}
-                                    sx={{ px: 3, py: 1.5 }}
+                                    sx={{ px: 3, py: 1.5, alignItems: 'center' }}
                                 >
-                                    <ListItemIcon sx={{ minWidth: 36 }}>
+                                    <ListItemIcon sx={{ minWidth: 36, mr: 1 }}>
                                         {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}
                                     </ListItemIcon>
                                     <ListItemText
@@ -233,7 +277,7 @@ export default function Home() {
                                                 </Typography>
                                             </Box>
                                         }
-                                        secondary={`${item.region || ''} / ${item.serviceName || ''} · ${item.visitDate || ''}`}
+                                        secondary={<Box sx={{ display: 'flex', gap: 1 }}><Typography variant="caption">{item.region || ''}</Typography><Typography variant="caption">/ {item.serviceName || ''}</Typography><Typography variant="caption">· {item.visitDate || ''}</Typography></Box>}
                                     />
                                 </ListItem>
                             ))}

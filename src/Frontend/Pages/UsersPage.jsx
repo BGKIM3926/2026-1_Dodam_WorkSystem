@@ -17,7 +17,7 @@ export default function UsersPage() {
 
     // 🔥 조회
     const fetchUsers = async () => {
-        const res = await fetch('http://localhost:8080/api/users');
+        const res = await fetch('/api/users');
         const data = await res.json();
 
         setRows(data.map((u) => ({
@@ -32,7 +32,7 @@ export default function UsersPage() {
 
     // 🔥 추가
     const handleCreate = async () => {
-        await fetch('http://localhost:8080/api/users', {
+        await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(form)

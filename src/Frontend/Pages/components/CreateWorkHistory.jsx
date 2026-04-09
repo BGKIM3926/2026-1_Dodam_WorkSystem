@@ -26,7 +26,7 @@ export default function CreateWorkHistory() {
     useEffect(() => {
         if (!serviceName) return;
 
-        fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
+        fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
             .then(res => res.json())
             .then(data => {
                 setSystems(data);
@@ -78,7 +78,7 @@ export default function CreateWorkHistory() {
                     formData.append("files", file);
                 });
 
-                const res = await fetch('http://localhost:8080/api/history/with-files', {
+                const res = await fetch('/api/history/with-files', {
                     method: 'POST',
                     body: formData
                 });

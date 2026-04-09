@@ -44,7 +44,7 @@ function SubHistoryPanel({ historyId, expanded }) {
     const [selectedSub, setSelectedSub] = useState(null);
 
     const fetchSubRows = async () => {
-        const res = await fetch(`http://localhost:8080/api/history-sub/${historyId}`);
+        const res = await fetch(`/api/history-sub/${historyId}`);
         const data = await res.json();
         setSubRows(data);
     };
@@ -61,7 +61,7 @@ function SubHistoryPanel({ historyId, expanded }) {
         formData.append('data', new Blob([JSON.stringify({ historyId, content: subForm.content, contentDetail: subForm.contentDetail })], { type: 'application/json' }));
         files.forEach((file) => formData.append('files', file));
 
-        await fetch('http://localhost:8080/api/history-sub/with-files', {
+        await fetch('/api/history-sub/with-files', {
             method: 'POST',
             body: formData,
         });
@@ -73,7 +73,7 @@ function SubHistoryPanel({ historyId, expanded }) {
     };
 
     const handleUpdateSub = async (subId) => {
-        await fetch(`http://localhost:8080/api/history-sub/${subId}`, {
+        await fetch(`/api/history-sub/${subId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(editForm),
@@ -83,7 +83,7 @@ function SubHistoryPanel({ historyId, expanded }) {
     };
 
     const handleDeleteSub = async () => {
-        await fetch(`http://localhost:8080/api/history-sub/${deleteSubId}`, { method: 'DELETE' });
+        await fetch(`/api/history-sub/${deleteSubId}`, { method: 'DELETE' });
         setOpenDeleteSub(false);
         setDeleteSubId(null);
         fetchSubRows();
@@ -257,7 +257,7 @@ function SubHistoryPanel({ historyId, expanded }) {
                                         {selectedSub.attachments.map((file) => {
                                             const ext = file.fileName?.split('.').pop()?.toLowerCase();
                                             const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
-                                            const fileUrl = `http://localhost:8080/api/history/attachments/${file.attachmentId}/download`;
+                                            const fileUrl = `/api/history/attachments/${file.attachmentId}/download`;
                                             return (
                                                 <Box key={file.attachmentId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                                     {isImage && (
@@ -444,8 +444,8 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
 
     const handleUpdate = async () => {
         const url = isManagerView
-            ? `http://localhost:8080/api/service-manager/${selectedRow.managerId}`
-            : `http://localhost:8080/api/history/${selectedRow.historyId}`;
+            ? `/api/service-manager/${selectedRow.managerId}`
+            : `/api/history/${selectedRow.historyId}`;
 
         await fetch(url, {
             method: 'PUT',
@@ -461,8 +461,8 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
 
     const handleDelete = async () => {
         const url = isManagerView
-            ? `http://localhost:8080/api/service-manager/${selectedRow.managerId}`
-            : `http://localhost:8080/api/history/${selectedRow.historyId}`;
+            ? `/api/service-manager/${selectedRow.managerId}`
+            : `/api/history/${selectedRow.historyId}`;
 
         await fetch(url, { method: 'DELETE' });
 
@@ -710,7 +710,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                                     {selectedRow.attachments.map((file) => {
                                         const ext = file.fileName?.split('.').pop()?.toLowerCase();
                                         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
-                                        const imageUrl = `http://localhost:8080/api/history/attachments/${file.attachmentId}/download`;
+                                        const imageUrl = `/api/history/attachments/${file.attachmentId}/download`;
 
                                         return (
                                             <Box key={file.attachmentId} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

@@ -3,7 +3,7 @@ import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelectedNode } from '../Contexts/SelectedNodeContext';
 import HistoryActions from './components/HistoryActions';
 import HistoryHeader from './components/HistoryHeader';
@@ -13,23 +13,31 @@ import HistoryList from './components/HistoryList';
 export default function WorkHistory() {
     const [rows, setRows] = useState([]);
     const [managerRows, setManagerRows] = useState([]);
-    const { selectedNode } = useSelectedNode();
+    const { selectedNode, setSelectedNode } = useSelectedNode();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [filter, setFilter] = useState('정기점검');
-    const isGlobalView = !selectedNode?.serviceName;
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [serviceId, setServiceId] = useState(null);
+    const customerNameFromQuery = searchParams.get('customerName');
+    const serviceNameFromQuery = searchParams.get('serviceName');
+    const customerName = selectedNode?.customerName ?? customerNameFromQuery;
+    const serviceName = selectedNode?.serviceName ?? serviceNameFromQuery;
+    const effectiveSelectedNode = customerName && serviceName
+        ? { customerName, serviceName }
+        : null;
+    const isGlobalView = !effectiveSelectedNode?.serviceName;
 
     const fetchRows = () => {
-        if (!selectedNode?.serviceName) {
+        if (!serviceName) {
             setRows([]);
             return;
         }
 
         const url = serviceId
-            ? `http://localhost:8080/api/history?serviceId=${serviceId}`
-            : `http://localhost:8080/api/history?serviceName=${selectedNode.serviceName}`;
+            ? `/api/history?serviceId=${serviceId}`
+            : `/api/history?serviceName=${serviceName}`;
 
         fetch(url)
             .then((res) => res.json())
@@ -38,9 +46,9 @@ export default function WorkHistory() {
     };
 
     const fetchServiceId = () => {
-        if (!selectedNode?.serviceName) return;
+        if (!serviceName || !customerName) return;
 
-        fetch(`http://localhost:8080/api/dsystem/filter?serviceName=${selectedNode.serviceName}&customerName=${selectedNode.customerName}`)
+        fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
             .then((res) => res.json())
             .then((data) => {
                 if (data.length > 0 && data[0].serviceId) {
@@ -56,7 +64,7 @@ export default function WorkHistory() {
             return;
         }
 
-        fetch(`http://localhost:8080/api/service-manager?serviceId=${serviceId}`)
+        fetch(`/api/service-manager?serviceId=${serviceId}`)
             .then((res) => res.json())
             .then((data) => setManagerRows(data))
             .catch((err) => console.error(err));
@@ -79,10 +87,18 @@ export default function WorkHistory() {
     });
 
     useEffect(() => {
-        console.log('selectedNode:', selectedNode);
+        if (!selectedNode?.serviceName && customerNameFromQuery && serviceNameFromQuery) {
+            setSelectedNode({
+                customerName: customerNameFromQuery,
+                serviceName: serviceNameFromQuery,
+            });
+        }
+    }, [selectedNode?.serviceName, customerNameFromQuery, serviceNameFromQuery, setSelectedNode]);
+
+    useEffect(() => {
         fetchRows();
         fetchServiceId();
-    }, [selectedNode]);
+    }, [customerName, serviceName]);
 
     useEffect(() => {
         if (serviceId) {
@@ -111,7 +127,7 @@ export default function WorkHistory() {
                 component="main"
                 disableGutters
                 sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
-                <HistoryHeader selectedNode={selectedNode} rows={rows} />
+                <HistoryHeader selectedNode={effectiveSelectedNode} rows={rows} />
                 {isGlobalView ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
                         <Typography variant="h6" color="text.secondary">

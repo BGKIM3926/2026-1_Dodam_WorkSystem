@@ -19,7 +19,7 @@ import com.example.backend.dto.UserRequestDto;
 import com.example.backend.dto.UserResponseDto;
 import com.example.backend.service.UserService;
 
-@CrossOrigin(origins = "http://localhost:3000") // 🔥 CORS
+@CrossOrigin(origins = "*") // 🔥 CORS
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
