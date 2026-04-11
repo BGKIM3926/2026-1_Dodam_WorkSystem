@@ -20,6 +20,7 @@ export default function WorkHistory() {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [serviceId, setServiceId] = useState(null);
+    const [isLegacyService, setIsLegacyService] = useState(false);
     const customerNameFromQuery = searchParams.get('customerName');
     const serviceNameFromQuery = searchParams.get('serviceName');
     const customerName = selectedNode?.customerName ?? customerNameFromQuery;
@@ -107,6 +108,21 @@ export default function WorkHistory() {
     }, [serviceId]);
 
     useEffect(() => {
+        if (!serviceId) {
+            setIsLegacyService(false);
+            return;
+        }
+
+        fetch(`/api/legacy-service/check?serviceId=${serviceId}`)
+            .then((res) => res.json())
+            .then((data) => setIsLegacyService(!!data.legacy))
+            .catch((err) => {
+                console.error(err);
+                setIsLegacyService(false);
+            });
+    }, [serviceId]);
+
+    useEffect(() => {
         if (filter === '기관정보') {
             fetchManagers();
         }
@@ -140,6 +156,7 @@ export default function WorkHistory() {
                             filter={filter} 
                             setFilter={setFilter} 
                             isGlobalView={isGlobalView} 
+                            canRegister={!isLegacyService}
                             startDate={startDate}
                             setStartDate={setStartDate}
                             endDate={endDate}

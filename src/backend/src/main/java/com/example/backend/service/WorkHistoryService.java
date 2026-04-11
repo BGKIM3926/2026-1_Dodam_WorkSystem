@@ -18,6 +18,7 @@ import com.example.backend.dto.WorkHistoryResponseDto;
 import com.example.backend.entity.Attachment;
 import com.example.backend.entity.MaintenanceHistory;
 import com.example.backend.repository.AttachmentRepository;
+import com.example.backend.repository.LegacyServiceRepository;
 import com.example.backend.repository.WorkHistoryRepository;
 
 @Service
@@ -25,10 +26,14 @@ public class WorkHistoryService {
 
     private final WorkHistoryRepository repository;
     private final AttachmentRepository attachmentRepository;
+    private final LegacyServiceRepository legacyServiceRepository;
     
-    public WorkHistoryService(WorkHistoryRepository repository, AttachmentRepository attachmentRepository) {
+    public WorkHistoryService(WorkHistoryRepository repository,
+                              AttachmentRepository attachmentRepository,
+                              LegacyServiceRepository legacyServiceRepository) {
         this.repository = repository;
         this.attachmentRepository = attachmentRepository;
+        this.legacyServiceRepository = legacyServiceRepository;
     }
 
     public List<WorkHistoryResponseDto> getHistoryByServiceId(Long serviceId) {
@@ -91,6 +96,9 @@ public class WorkHistoryService {
     }
 
     public MaintenanceHistory create(MaintenanceHistory history) {
+        if (history.getServiceId() != null && legacyServiceRepository.existsById(history.getServiceId())) {
+            throw new IllegalStateException("해당 서비스는 작업 종료 상태로 등록할 수 없습니다.");
+        }
         return repository.save(history);
     }
 

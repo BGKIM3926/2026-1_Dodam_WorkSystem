@@ -20,39 +20,64 @@ export default function CreateServiceManager() {
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
     const [serviceId, setServiceId] = useState(null);
+    const [isLegacyService, setIsLegacyService] = useState(false);
 
     useEffect(() => {
         if (!serviceName) {
-            setSnackbar({ open: true, message: 'ì˜ëª»ëœ ì ‘ê·¼ì…ë‹ˆë‹¤.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Àß¸øµÈ Á¢±ÙÀÔ´Ï´Ù.', severity: 'error' });
             navigate('/dashboard/workhistory');
             return;
         }
 
         fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 if (data.length > 0 && data[0].serviceId) {
                     setServiceId(data[0].serviceId);
                 }
             })
-            .catch(err => console.error(err));
-    }, [serviceName]);
+            .catch((err) => console.error(err));
+    }, [serviceName, customerName, navigate]);
+
+    useEffect(() => {
+        if (!serviceId) {
+            setIsLegacyService(false);
+            return;
+        }
+
+        fetch(`/api/legacy-service/check?serviceId=${serviceId}`)
+            .then((res) => res.json())
+            .then((data) => {
+                const legacy = !!data.legacy;
+                setIsLegacyService(legacy);
+                if (legacy) {
+                    setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â Á¤º¸ µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+                    navigate('/dashboard/workhistory');
+                }
+            })
+            .catch((err) => console.error(err));
+    }, [serviceId, navigate]);
 
     const handleSubmit = async () => {
+        if (isLegacyService) {
+            setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â Á¤º¸ µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+            return;
+        }
+
         if (!form.name) {
-            setSnackbar({ open: true, message: 'ë‹´ë‹¹ìëª…ì„ ì…ë ¥í•˜ì„¸ìš”', severity: 'warning' });
+            setSnackbar({ open: true, message: '´ã´çÀÚ¸íÀ» ÀÔ·ÂÇØ ÁÖ¼¼¿ä.', severity: 'warning' });
             return;
         }
 
         if (!serviceId) {
-            setSnackbar({ open: true, message: 'Service IDë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤', severity: 'error' });
+            setSnackbar({ open: true, message: 'Service ID¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.', severity: 'error' });
             return;
         }
 
         try {
             const body = {
                 ...form,
-                serviceId: serviceId,
+                serviceId,
             };
 
             const res = await fetch('/api/service-manager', {
@@ -63,14 +88,14 @@ export default function CreateServiceManager() {
 
             if (!res.ok) {
                 const text = await res.text();
-                setSnackbar({ open: true, message: 'ë“±ë¡ ì‹¤íŒ¨: ' + text, severity: 'error' });
+                setSnackbar({ open: true, message: `µî·Ï ½ÇÆĞ: ${text}`, severity: 'error' });
                 return;
             }
 
             navigate('/dashboard/workhistory');
         } catch (err) {
-            console.error('ë“±ë¡ ì‹¤íŒ¨:', err);
-            setSnackbar({ open: true, message: 'ë“±ë¡ ì¤‘ ì˜¤ë¥˜ ë°œìƒ', severity: 'error' });
+            console.error('µî·Ï ½ÇÆĞ:', err);
+            setSnackbar({ open: true, message: 'µî·Ï Áß ¿À·ù ¹ß»ı', severity: 'error' });
         }
     };
 

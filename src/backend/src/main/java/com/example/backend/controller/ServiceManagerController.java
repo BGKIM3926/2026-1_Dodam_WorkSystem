@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.backend.entity.ServiceManager;
+import com.example.backend.repository.LegacyServiceRepository;
 import com.example.backend.repository.ServiceManagerRepository;
 
 @CrossOrigin(origins = "*")
@@ -22,9 +23,11 @@ import com.example.backend.repository.ServiceManagerRepository;
 public class ServiceManagerController {
 
     private final ServiceManagerRepository repository;
+    private final LegacyServiceRepository legacyServiceRepository;
 
-    public ServiceManagerController(ServiceManagerRepository repository) {
+    public ServiceManagerController(ServiceManagerRepository repository, LegacyServiceRepository legacyServiceRepository) {
         this.repository = repository;
+        this.legacyServiceRepository = legacyServiceRepository;
     }
 
     @GetMapping
@@ -39,12 +42,18 @@ public class ServiceManagerController {
 
     @PostMapping
     public ServiceManager create(@RequestBody ServiceManager manager) {
+        if (manager.getServiceId() != null && legacyServiceRepository.existsById(manager.getServiceId())) {
+            throw new IllegalStateException("해당 서비스는 작업 종료 상태로 정보 등록이 불가합니다.");
+        }
         return repository.save(manager);
     }
 
     @PutMapping("/{id}")
     public ServiceManager update(@PathVariable Long id, @RequestBody ServiceManager request) {
         ServiceManager manager = repository.findById(id).orElseThrow();
+        if (manager.getServiceId() != null && legacyServiceRepository.existsById(manager.getServiceId())) {
+            throw new IllegalStateException("해당 서비스는 작업 종료 상태로 수정이 불가합니다.");
+        }
         manager.setName(request.getName());
         manager.setDept(request.getDept());
         manager.setPhone(request.getPhone());
@@ -55,5 +64,10 @@ public class ServiceManagerController {
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         repository.deleteById(id);
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalStateException.class)
+    public org.springframework.http.ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
+        return org.springframework.http.ResponseEntity.badRequest().body(ex.getMessage());
     }
 }

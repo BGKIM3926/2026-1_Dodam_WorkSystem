@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
-export default function HistoryActions({ filter, setFilter, isGlobalView, startDate, setStartDate, endDate, setEndDate }) {
+export default function HistoryActions({ filter, setFilter, isGlobalView, canRegister = true, startDate, setStartDate, endDate, setEndDate }) {
 
     const navigate = useNavigate();
 
@@ -168,7 +168,7 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, startD
                     </Box>
                 </LocalizationProvider>
 
-                {!isGlobalView && (
+                {!isGlobalView && canRegister && (
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}

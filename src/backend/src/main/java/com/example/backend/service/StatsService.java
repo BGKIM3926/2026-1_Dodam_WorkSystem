@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.example.backend.entity.MaintenanceHistory;
+import com.example.backend.repository.LegacyServiceRepository;
 import com.example.backend.repository.WorkHistoryRepository;
 
 import jakarta.persistence.EntityManager;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class StatsService {
 
     private final WorkHistoryRepository workHistoryRepository;
+    private final LegacyServiceRepository legacyServiceRepository;
 
     @PersistenceContext
     private EntityManager em;
@@ -77,6 +79,9 @@ public class StatsService {
                         "ORDER BY d.serviceId",
                 Object[].class)
                 .getResultList();
+        Set<Long> legacyServiceIds = legacyServiceRepository.findAll().stream()
+                .map(item -> item.getServiceId())
+                .collect(Collectors.toSet());
 
         // 이번 달 정기점검이 있는 serviceId 조회 (전체 기준)
         List<Long> inspectedServiceIds = em.createQuery(
@@ -94,6 +99,9 @@ public class StatsService {
 
         for (Object[] row : allServices) {
             Long serviceId = ((Number) row[0]).longValue();
+            if (legacyServiceIds.contains(serviceId)) {
+                continue;
+            }
             if (inspectedSet.contains(serviceId)) {
                 continue;
             }

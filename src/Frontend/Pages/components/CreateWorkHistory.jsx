@@ -11,10 +11,9 @@ export default function CreateWorkHistory() {
     const [form, setForm] = useState({
         workType: '',
         issue: '',
-        systemIds: []
+        systemIds: [],
     });
 
-    // âœ… íŒŒì¼ state ì¶”ê°€
     const [files, setFiles] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
 
@@ -22,79 +21,99 @@ export default function CreateWorkHistory() {
     const customerName = selectedNode?.customerName;
     const [systems, setSystems] = useState([]);
     const [serviceId, setServiceId] = useState(null);
+    const [isLegacyService, setIsLegacyService] = useState(false);
 
     useEffect(() => {
         if (!serviceName) return;
 
         fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 setSystems(data);
                 if (data.length > 0 && data[0].serviceId) {
                     setServiceId(data[0].serviceId);
                 }
             })
-            .catch(err => console.error(err));
-
-    }, [serviceName]);
+            .catch((err) => console.error(err));
+    }, [serviceName, customerName]);
 
     useEffect(() => {
         if (!serviceName) {
-            setSnackbar({ open: true, message: 'ìž˜ëª»ëœ ì ‘ê·¼ìž…ë‹ˆë‹¤.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Àß¸øµÈ Á¢±ÙÀÔ´Ï´Ù.', severity: 'error' });
             navigate('/dashboard/workhistory');
         }
-    }, []);
+    }, [serviceName, navigate]);
+
+    useEffect(() => {
+        if (!serviceId) {
+            setIsLegacyService(false);
+            return;
+        }
+
+        fetch(`/api/legacy-service/check?serviceId=${serviceId}`)
+            .then((res) => res.json())
+            .then((data) => {
+                const legacy = !!data.legacy;
+                setIsLegacyService(legacy);
+                if (legacy) {
+                    setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â ÀÌ·Â µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+                    navigate('/dashboard/workhistory');
+                }
+            })
+            .catch((err) => console.error(err));
+    }, [serviceId, navigate]);
 
     const handleSubmit = async () => {
-        if (form.workType !== 'ì •ê¸°ì ê²€' && (!form.systemIds || form.systemIds.length === 0)) {
-            setSnackbar({ open: true, message: 'ì‹œìŠ¤í…œì„ ì„ íƒí•˜ì„¸ìš”', severity: 'warning' });
+        if (isLegacyService) {
+            setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â ÀÌ·Â µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+            return;
+        }
+
+        if (form.workType !== 'Á¤±âÁ¡°Ë' && (!form.systemIds || form.systemIds.length === 0)) {
+            setSnackbar({ open: true, message: '½Ã½ºÅÛÀ» ¼±ÅÃÇØ ÁÖ¼¼¿ä.', severity: 'warning' });
             return;
         }
 
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
 
-        const systemIds = form.workType === 'ì •ê¸°ì ê²€' ? [null] : form.systemIds;
+        const systemIds = form.workType === 'Á¤±âÁ¡°Ë' ? [null] : form.systemIds;
 
         try {
-            for (const systemId of systemIds) {
+            for (const systemIdItem of systemIds) {
                 const body = {
                     ...form,
-                    systemId: systemId ? Number(systemId) : null,
+                    systemId: systemIdItem ? Number(systemIdItem) : null,
                     serviceId: serviceId ? Number(serviceId) : null,
                     region: customerName,
-                    serviceName: serviceName,
+                    serviceName,
                     workerId: user.id,
-                    createdBy: user.id
+                    createdBy: user.id,
                 };
                 delete body.systemIds;
 
                 const formData = new FormData();
-                formData.append(
-                    "data",
-                    new Blob([JSON.stringify(body)], { type: "application/json" })
-                );
-                files.forEach(file => {
-                    formData.append("files", file);
+                formData.append('data', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+                files.forEach((file) => {
+                    formData.append('files', file);
                 });
 
                 const res = await fetch('/api/history/with-files', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
                 });
 
                 if (!res.ok) {
                     const text = await res.text();
-                    setSnackbar({ open: true, message: 'ë“±ë¡ ì‹¤íŒ¨: ' + text, severity: 'error' });
+                    setSnackbar({ open: true, message: `µî·Ï ½ÇÆÐ: ${text}`, severity: 'error' });
                     return;
                 }
             }
 
             navigate('/dashboard/workhistory');
-
         } catch (err) {
-            console.error('ðŸ”¥ ì—…ë¡œë“œ ì‹¤íŒ¨:', err);
-            setSnackbar({ open: true, message: 'íŒŒì¼ ì—…ë¡œë“œ ì¤‘ ì˜¤ë¥˜ ë°œìƒ', severity: 'error' });
+            console.error('¾÷·Îµå ½ÇÆÐ:', err);
+            setSnackbar({ open: true, message: 'ÆÄÀÏ ¾÷·Îµå Áß ¿À·ù ¹ß»ý', severity: 'error' });
         }
     };
 
@@ -119,8 +138,8 @@ export default function CreateWorkHistory() {
                 setForm={setForm}
                 onSubmit={handleSubmit}
                 systems={systems}
-                files={files}        // âœ… ì¶”ê°€
-                setFiles={setFiles}  // âœ… ì¶”ê°€
+                files={files}
+                setFiles={setFiles}
             />
         </Box>
     );

@@ -26,12 +26,25 @@ function SideMenuMobile({ open, toggleDrawer }) {
 
 
   useEffect(() => {
-    fetch('/api/dsystem')
-      .then((res) => res.json())
-      .then((data) => {
-        const tree = buildTree(data);
-        setTreeData(tree);
-      });
+    const fetchTreeData = async () => {
+      try {
+        const [systemsRes, legacyRes] = await Promise.all([
+          fetch('/api/dsystem'),
+          fetch('/api/legacy-service/ids'),
+        ]);
+        const [systems, legacyIds] = await Promise.all([
+          systemsRes.json(),
+          legacyRes.json(),
+        ]);
+        setTreeData(buildTree(systems, legacyIds));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchTreeData();
+    window.addEventListener('legacy-services-updated', fetchTreeData);
+    return () => window.removeEventListener('legacy-services-updated', fetchTreeData);
   }, []);
 
   useEffect(() => {

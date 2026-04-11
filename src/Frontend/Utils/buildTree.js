@@ -1,31 +1,54 @@
-export function buildTree(data) {
-    const map = {};
+﻿export function buildTree(data, legacyServiceIds = []) {
+    const legacySet = new Set((legacyServiceIds || []).map((id) => Number(id)));
 
-    data.forEach(item => {
+    const roots = {
+        active: {
+            id: 'root-active',
+            name: '작업 진행 중',
+            children: {},
+        },
+        closed: {
+            id: 'root-closed',
+            name: '작업 종료',
+            children: {},
+        },
+    };
 
-        // customer 생성
-        if (!map[item.customerName]) {
-            map[item.customerName] = {
-                id: item.customerName,
-                name: item.customerName,
-                children: {}
+    data.forEach((item) => {
+        const serviceId = item.serviceId != null ? Number(item.serviceId) : null;
+        const isLegacy = serviceId != null && legacySet.has(serviceId);
+        const targetRoot = isLegacy ? roots.closed : roots.active;
+        const customerName = item.customerName || '미분류';
+        const serviceName = item.serviceNameMin || '(서비스명 없음)';
+
+        if (!targetRoot.children[customerName]) {
+            targetRoot.children[customerName] = {
+                id: `${targetRoot.id}-${customerName}`,
+                name: customerName,
+                children: {},
             };
         }
 
-        // service 추가 (중복 제거)
-        if (!map[item.customerName].children[item.serviceNameMin]) {
-            map[item.customerName].children[item.serviceNameMin] = {
-                id: item.customerName + '-' + item.serviceNameMin,
-                name: item.serviceNameMin,
-                serviceName: item.serviceNameMin,
-                customerName: item.customerName
+        const serviceKey = `${serviceName}-${serviceId ?? 'none'}`;
+        if (!targetRoot.children[customerName].children[serviceKey]) {
+            targetRoot.children[customerName].children[serviceKey] = {
+                id: `${targetRoot.id}-${customerName}-${serviceKey}`,
+                name: serviceName,
+                serviceName,
+                customerName,
+                serviceId,
+                isLegacy,
             };
         }
     });
 
-    // children 객체 → 배열 변환
-    return Object.values(map).map(customer => ({
-        ...customer,
-        children: Object.values(customer.children)
-    }));
+    const toNodeArray = (root) => ({
+        ...root,
+        children: Object.values(root.children).map((customerNode) => ({
+            ...customerNode,
+            children: Object.values(customerNode.children),
+        })),
+    });
+
+    return [toNodeArray(roots.active), toNodeArray(roots.closed)];
 }
