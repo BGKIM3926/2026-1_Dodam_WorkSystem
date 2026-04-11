@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,6 +53,18 @@ public class HistorySubController {
     @PutMapping("/{id}")
     public HistorySub update(@PathVariable Long id, @RequestBody HistorySub request) {
         return service.update(id, request);
+    }
+
+    @PutMapping("/with-files/{id}")
+    public HistorySub updateWithFiles(
+            @PathVariable Long id,
+            @RequestPart("data") HistorySub request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "retainedAttachmentIds", required = false) List<Long> retainedAttachmentIds) throws IOException {
+
+        HistorySub updated = service.update(id, request);
+        service.replaceAttachments(updated.getSubId(), retainedAttachmentIds, files);
+        return updated;
     }
 
     @DeleteMapping("/{id}")

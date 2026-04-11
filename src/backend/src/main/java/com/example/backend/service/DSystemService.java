@@ -1,7 +1,13 @@
 package com.example.backend.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,48 +91,129 @@ public class DSystemService {
     }
 
     public List<DSystemDto> getAll() {
-        return repository.findAll().stream().map(entity -> {
-            DSystemDto dto = new DSystemDto();
-
-            dto.setSystemID(entity.getSystemId());
-            dto.setCustomerName(entity.getCustomerName());
-            dto.setServiceName(entity.getServiceName());
-            dto.setServiceNameMin(entity.getServiceNameMin());
-            dto.setSystemName(entity.getSystemName());
-            dto.setSystemNameMin(entity.getSystemNameMin());
-            dto.setHardwareName(entity.getHardwareName());
-            dto.setHardwareInfo(entity.getHardwareInfo());
-            dto.setOsName(entity.getOsName());
-            dto.setOsIp(entity.getOsIp());
-            dto.setOsInfo(entity.getOsInfo());
-            dto.setServiceId(entity.getServiceId());
-
-            return dto;
-        }).toList();
+        return repository.findAll().stream().map(this::toDto).toList();
     }
 
     public List<DSystemDto> getByService(String serviceName, String customerName) {
         return repository
                 .findByServiceNameMinAndCustomerName(serviceName, customerName)
                 .stream()
-                .map(entity -> {
-                    DSystemDto dto = new DSystemDto();
-
-                    dto.setSystemID(entity.getSystemId());
-                    dto.setCustomerName(entity.getCustomerName());
-                    dto.setServiceName(entity.getServiceName());
-                    dto.setServiceNameMin(entity.getServiceNameMin());
-                    dto.setSystemName(entity.getSystemName());
-                    dto.setSystemNameMin(entity.getSystemNameMin());
-                    dto.setHardwareName(entity.getHardwareName());
-                    dto.setHardwareInfo(entity.getHardwareInfo());
-                    dto.setOsName(entity.getOsName());
-                    dto.setOsIp(entity.getOsIp());
-                    dto.setOsInfo(entity.getOsInfo());
-                    dto.setServiceId(entity.getServiceId());
-
-                    return dto;
-                })
+                .map(this::toDto)
                 .toList();
+    }
+
+    public byte[] exportDSystemExcel(String customerName) {
+        List<DSystem> systems = getSystemsByCustomerName(customerName);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("dsystem");
+            createHeaderRow(sheet, "SYSTEM_ID", "CUSTOMER_NAME", "SERVICE_NAME", "SERVICE_NAME_MIN", "SYSTEM_NAME",
+                    "SYSTEM_NAME_MIN", "HARDWARE_NAME", "HARDWARE_INFO", "OS_NAME", "OS_IP", "OS_INFO", "SERVICE_ID");
+
+            int rowIndex = 1;
+            for (DSystem system : systems) {
+                Row row = sheet.createRow(rowIndex++);
+                row.createCell(0).setCellValue(valueOf(system.getSystemId()));
+                row.createCell(1).setCellValue(valueOf(system.getCustomerName()));
+                row.createCell(2).setCellValue(valueOf(system.getServiceName()));
+                row.createCell(3).setCellValue(valueOf(system.getServiceNameMin()));
+                row.createCell(4).setCellValue(valueOf(system.getSystemName()));
+                row.createCell(5).setCellValue(valueOf(system.getSystemNameMin()));
+                row.createCell(6).setCellValue(valueOf(system.getHardwareName()));
+                row.createCell(7).setCellValue(valueOf(system.getHardwareInfo()));
+                row.createCell(8).setCellValue(valueOf(system.getOsName()));
+                row.createCell(9).setCellValue(valueOf(system.getOsIp()));
+                row.createCell(10).setCellValue(valueOf(system.getOsInfo()));
+                row.createCell(11).setCellValue(valueOf(system.getServiceId()));
+            }
+
+            autosizeColumns(sheet, 12);
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException ex) {
+            throw new RuntimeException("Failed to generate dsystem export file.", ex);
+        }
+    }
+
+    public byte[] exportDSystemAccountExcel(String customerName) {
+        List<DSystem> systems = getSystemsByCustomerName(customerName);
+        List<Integer> systemIds = systems.stream()
+                .map(DSystem::getSystemId)
+                .filter(id -> id != null)
+                .map(Math::toIntExact)
+                .toList();
+
+        List<DSystemAccount> accounts = systemIds.isEmpty()
+                ? new ArrayList<>()
+                : accountRepository.findBySystemIdIn(systemIds);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("dsystemaccount");
+            createHeaderRow(sheet, "SYSTEM_ACCOUNT_ID", "SYSTEM_ID", "SYSTEM_TYPE", "ACCESS_TYPE", "PORT_NUMBER",
+                    "ACCOUNT_ID", "ACCOUNT_PW");
+
+            int rowIndex = 1;
+            for (DSystemAccount account : accounts) {
+                Row row = sheet.createRow(rowIndex++);
+                row.createCell(0).setCellValue(valueOf(account.getId()));
+                row.createCell(1).setCellValue(valueOf(account.getSystemId()));
+                row.createCell(2).setCellValue(valueOf(account.getSystemType()));
+                row.createCell(3).setCellValue(valueOf(account.getAccessType()));
+                row.createCell(4).setCellValue(valueOf(account.getPortNumber()));
+                row.createCell(5).setCellValue(valueOf(account.getAccountId()));
+                row.createCell(6).setCellValue(valueOf(account.getAccountPw()));
+            }
+
+            autosizeColumns(sheet, 7);
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException ex) {
+            throw new RuntimeException("Failed to generate dsystemaccount export file.", ex);
+        }
+    }
+
+    private DSystemDto toDto(DSystem entity) {
+        DSystemDto dto = new DSystemDto();
+        dto.setSystemID(entity.getSystemId());
+        dto.setCustomerName(entity.getCustomerName());
+        dto.setServiceName(entity.getServiceName());
+        dto.setServiceNameMin(entity.getServiceNameMin());
+        dto.setSystemName(entity.getSystemName());
+        dto.setSystemNameMin(entity.getSystemNameMin());
+        dto.setHardwareName(entity.getHardwareName());
+        dto.setHardwareInfo(entity.getHardwareInfo());
+        dto.setOsName(entity.getOsName());
+        dto.setOsIp(entity.getOsIp());
+        dto.setOsInfo(entity.getOsInfo());
+        dto.setServiceId(entity.getServiceId());
+        return dto;
+    }
+
+    private List<DSystem> getSystemsByCustomerName(String customerName) {
+        if (customerName == null || customerName.isBlank()) {
+            return repository.findAll();
+        }
+        return repository.findByCustomerName(customerName);
+    }
+
+    private void createHeaderRow(Sheet sheet, String... headers) {
+        Row header = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            header.createCell(i).setCellValue(headers[i]);
+        }
+    }
+
+    private void autosizeColumns(Sheet sheet, int count) {
+        for (int i = 0; i < count; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private String valueOf(Object value) {
+        return value == null ? "" : String.valueOf(value);
     }
 }

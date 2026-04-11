@@ -22,17 +22,17 @@ public class StatsController {
     private final StatsService statsService;
 
     @GetMapping("/summary")
-    public Map<String, Object> getSummary(@RequestParam String workerId) {
+    public Map<String, Object> getSummary(@RequestParam(required = false) String workerId) {
         return statsService.getSummary(workerId);
     }
 
     @GetMapping("/missing-inspections")
-    public List<Map<String, Object>> getMissingInspections(@RequestParam String workerId) {
+    public List<Map<String, Object>> getMissingInspections(@RequestParam(required = false) String workerId) {
         return statsService.getMissingInspections(workerId);
     }
 
     @GetMapping("/recent")
-    public List<Map<String, Object>> getRecentHistory(@RequestParam String workerId) {
+    public List<Map<String, Object>> getRecentHistory(@RequestParam(required = false) String workerId) {
         return statsService.getRecentHistory(workerId);
     }
 }

@@ -10,6 +10,8 @@ import java.util.List;
 @Repository
 public interface DSystemRepository extends JpaRepository<DSystem, Long> {
 
+    List<DSystem> findByCustomerName(String customerName);
+
     List<DSystem> findByServiceNameMinAndCustomerName(
             String serviceNameMin,
             String customerName);

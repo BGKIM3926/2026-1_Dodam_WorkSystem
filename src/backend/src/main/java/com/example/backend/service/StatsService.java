@@ -26,10 +26,14 @@ public class StatsService {
     @PersistenceContext
     private EntityManager em;
 
+    private boolean hasWorkerId(String workerId) {
+        return workerId != null && !workerId.isBlank();
+    }
+
     public Map<String, Object> getSummary(String workerId) {
         List<MaintenanceHistory> allByWorker = workHistoryRepository.findAll()
                 .stream()
-                .filter(h -> workerId.equals(h.getWorkerId()))
+                .filter(h -> !hasWorkerId(workerId) || workerId.equals(h.getWorkerId()))
                 .collect(Collectors.toList());
 
         long totalCount = allByWorker.size();
@@ -119,17 +123,24 @@ public class StatsService {
     }
 
     public List<Map<String, Object>> getRecentHistory(String workerId) {
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = em.createQuery(
+        StringBuilder jpql = new StringBuilder(
                 "SELECT m.historyId, m.workType, m.issue, m.region, " +
                         "COALESCE(d.serviceNameMin, m.serviceName), m.visitDate " +
-                        "FROM MaintenanceHistory m LEFT JOIN DSystem d ON m.systemId = d.systemId " +
-                        "WHERE m.workerId = :workerId " +
-                        "ORDER BY m.visitDate DESC, m.historyId DESC",
-                Object[].class)
-                .setParameter("workerId", workerId)
-                .setMaxResults(10)
-                .getResultList();
+                        "FROM MaintenanceHistory m LEFT JOIN DSystem d ON m.systemId = d.systemId ");
+
+        if (hasWorkerId(workerId)) {
+            jpql.append("WHERE m.workerId = :workerId ");
+        }
+
+        jpql.append("ORDER BY m.visitDate DESC, m.historyId DESC");
+
+        var query = em.createQuery(jpql.toString(), Object[].class);
+        if (hasWorkerId(workerId)) {
+            query.setParameter("workerId", workerId);
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query.setMaxResults(10).getResultList();
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] row : rows) {

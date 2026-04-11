@@ -1,39 +1,59 @@
-import { DataGrid } from '@mui/x-data-grid';
-import { useEffect, useState } from 'react';
-import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
-
 import AddIcon from '@mui/icons-material/Add';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
-import { Divider, useMediaQuery } from '@mui/material';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import { useMediaQuery } from '@mui/material';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
 import IconButton from '@mui/material/IconButton';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-
-import { koKR } from '@mui/x-data-grid/locales';
-
+import LinearProgress from '@mui/material/LinearProgress';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { DataGrid } from '@mui/x-data-grid';
+import { koKR } from '@mui/x-data-grid/locales';
+import { useEffect, useState } from 'react';
 
-// 🔥 추가
-import FormControl from '@mui/material/FormControl';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
+const STATUS_TEXT = {
+  NEW: '신규',
+  UPDATED: '수정',
+  DELETED: '삭제',
+};
+
+const statusChipColor = (status) => {
+  if (status === 'NEW') return 'success';
+  if (status === 'UPDATED') return 'warning';
+  if (status === 'DELETED') return 'error';
+  return 'default';
+};
+
+const isExcelFile = (file) => {
+  if (!file) return false;
+  const lower = file.name.toLowerCase();
+  return lower.endsWith('.xlsx') || lower.endsWith('.xls');
+};
 
 export default function CustomizedDataGrid() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const { selectedNode } = useSelectedNode();
 
   const [selectedRow, setSelectedRow] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,37 +62,64 @@ export default function CustomizedDataGrid() {
 
   const isMobile = useMediaQuery('(max-width:600px)');
 
-  // 🔥 추가 (핵심)
   const [customerFilter, setCustomerFilter] = useState('');
 
-  // 수정 모달 상태
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [editAccounts, setEditAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  // 🔥 고객명 목록 생성
-  const customerList = [...new Set(rows.map(r => r.customerName))];
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkStep, setBulkStep] = useState('dsystem');
+  const [bulkError, setBulkError] = useState('');
+  const [dsystemFile, setDsystemFile] = useState(null);
+  const [dsystemPreview, setDsystemPreview] = useState(null);
+  const [dsystemNoChange, setDsystemNoChange] = useState(false);
+  const [previewingDSystem, setPreviewingDSystem] = useState(false);
+  const [dsystemAccountFile, setDsystemAccountFile] = useState(null);
+  const [dsystemAccountPreview, setDsystemAccountPreview] = useState(null);
+  const [previewingAccount, setPreviewingAccount] = useState(false);
+  const [applyingBulk, setApplyingBulk] = useState(false);
+  const [isDsystemDragging, setIsDsystemDragging] = useState(false);
+  const [isDsystemAccountDragging, setIsDsystemAccountDragging] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [exportingDSystem, setExportingDSystem] = useState(false);
+  const [exportingDSystemAccount, setExportingDSystemAccount] = useState(false);
 
-  // 🔥 필터링된 rows
+  const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))];
+
   const filteredRows = rows.filter((row) => {
     if (!customerFilter) return true;
     return row.customerName === customerFilter;
   });
 
+  const fetchSystems = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/dsystem');
+      const data = await res.json();
+      const mapped = data.map((item, index) => ({ id: index, ...item }));
+      setRows(mapped);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSystems();
+  }, []);
+
   const handleRowClick = async (params) => {
     const systemId = params.row.systemID;
-
     setSelectedRow(params.row);
     setModalOpen(true);
-
     setLoadingAccount(true);
 
     try {
-      const res = await fetch(
-        `/api/account?systemId=${systemId}`
-      );
-
+      const res = await fetch(`/api/account?systemId=${systemId}`);
       const data = await res.json();
       setAccountData(data);
     } catch (err) {
@@ -82,7 +129,6 @@ export default function CustomizedDataGrid() {
     }
   };
 
-  // 수정 버튼 클릭
   const handleEditClick = async (e, row) => {
     e.stopPropagation();
     setEditForm({
@@ -126,7 +172,14 @@ export default function CustomizedDataGrid() {
   const handleAddAccount = () => {
     setEditAccounts((prev) => [
       ...prev,
-      { _key: Date.now(), systemType: '', accessType: '', portNumber: '', accountId: '', accountPw: '' },
+      {
+        _key: Date.now(),
+        systemType: '',
+        accessType: '',
+        portNumber: '',
+        accountId: '',
+        accountPw: '',
+      },
     ]);
   };
 
@@ -166,11 +219,7 @@ export default function CustomizedDataGrid() {
 
       if (!res.ok) throw new Error('수정 실패');
 
-      // 데이터 그리드 새로고침
-      const refreshRes = await fetch('/api/dsystem');
-      const refreshData = await refreshRes.json();
-      setRows(refreshData.map((item, index) => ({ id: index, ...item })));
-
+      await fetchSystems();
       setEditOpen(false);
     } catch (err) {
       console.error(err);
@@ -180,7 +229,302 @@ export default function CustomizedDataGrid() {
     }
   };
 
-  // 🔥 핵심: customerName 컬럼만 dropdown 적용
+  const resetBulkState = () => {
+    setBulkStep('dsystem');
+    setBulkError('');
+    setDsystemFile(null);
+    setDsystemPreview(null);
+    setDsystemNoChange(false);
+    setDsystemAccountFile(null);
+    setDsystemAccountPreview(null);
+  };
+
+  const openBulkDialog = () => {
+    resetBulkState();
+    setBulkOpen(true);
+  };
+
+  const closeBulkDialog = () => {
+    setBulkOpen(false);
+    resetBulkState();
+  };
+
+  const openExportDialog = () => {
+    setExportError('');
+    setExportOpen(true);
+  };
+
+  const closeExportDialog = () => {
+    if (exportingDSystem || exportingDSystemAccount) return;
+    setExportOpen(false);
+    setExportError('');
+  };
+
+  const getExportUrl = (target) => {
+    const params = new URLSearchParams();
+    if (customerFilter) {
+      params.set('customerName', customerFilter);
+    }
+    const query = params.toString();
+    return `/api/dsystem/export/${target}${query ? `?${query}` : ''}`;
+  };
+
+  const getFilenameFromDisposition = (disposition, fallbackName) => {
+    if (!disposition) return fallbackName;
+    const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utfMatch?.[1]) {
+      return decodeURIComponent(utfMatch[1]);
+    }
+    const basicMatch = disposition.match(/filename=\"?([^\";]+)\"?/i);
+    return basicMatch?.[1] || fallbackName;
+  };
+
+  const downloadBlobFile = (blob, fileName) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleExportDownload = async (target) => {
+    const isDsystem = target === 'dsystem';
+    const setLoading = isDsystem ? setExportingDSystem : setExportingDSystemAccount;
+    const fallbackName = isDsystem ? 'dsystem.xlsx' : 'dsystemaccount.xlsx';
+
+    setLoading(true);
+    setExportError('');
+    try {
+      const res = await fetch(getExportUrl(target));
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || '엑셀 내보내기에 실패했습니다.');
+      }
+      const blob = await res.blob();
+      const filename = getFilenameFromDisposition(res.headers.get('Content-Disposition'), fallbackName);
+      downloadBlobFile(blob, filename);
+    } catch (err) {
+      setExportError(err.message || '엑셀 내보내기에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const parseErrorText = async (res) => {
+    const text = await res.text();
+    return text || '요청 처리 중 오류가 발생했습니다.';
+  };
+
+  const handleDsystemFileSelected = (file) => {
+    if (!file) return;
+    if (!isExcelFile(file)) {
+      setBulkError('dsystem 파일은 .xlsx 또는 .xls 형식만 가능합니다.');
+      return;
+    }
+    setDsystemFile(file);
+    setDsystemNoChange(false);
+    setDsystemPreview(null);
+    setBulkError('');
+  };
+
+  const handleDsystemAccountFileSelected = (file) => {
+    if (!file) return;
+    if (!isExcelFile(file)) {
+      setBulkError('dsystemaccount 파일은 .xlsx 또는 .xls 형식만 가능합니다.');
+      return;
+    }
+    setDsystemAccountFile(file);
+    setDsystemAccountPreview(null);
+    setBulkError('');
+  };
+
+  const handlePreviewDSystem = async () => {
+    if (!dsystemFile) {
+      setBulkError('dsystem 엑셀 파일을 선택해 주세요.');
+      return;
+    }
+    if (!isExcelFile(dsystemFile)) {
+      setBulkError('dsystem 파일은 .xlsx 또는 .xls 형식만 가능합니다.');
+      return;
+    }
+
+    setPreviewingDSystem(true);
+    setBulkError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', dsystemFile);
+
+      const res = await fetch('/api/dsystem/bulk-sync/preview/dsystem', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseErrorText(res));
+      }
+
+      const data = await res.json();
+      setDsystemPreview(data);
+      setDsystemNoChange(false);
+    } catch (err) {
+      setBulkError(err.message || 'dsystem 미리보기 처리에 실패했습니다.');
+    } finally {
+      setPreviewingDSystem(false);
+    }
+  };
+
+  const handleDSystemNoChange = () => {
+    setDsystemNoChange(true);
+    setDsystemPreview({
+      target: 'dsystem',
+      summary: { created: 0, updated: 0, deleted: 0, totalChanged: 0 },
+      changes: [],
+    });
+    setBulkError('');
+    setBulkStep('dsystemaccount');
+  };
+
+  const handlePreviewDSystemAccount = async () => {
+    if (!dsystemAccountFile) {
+      setBulkError('dsystemaccount 엑셀 파일을 선택해 주세요.');
+      return;
+    }
+    if (!isExcelFile(dsystemAccountFile)) {
+      setBulkError('dsystemaccount 파일은 .xlsx 또는 .xls 형식만 가능합니다.');
+      return;
+    }
+
+    setPreviewingAccount(true);
+    setBulkError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', dsystemAccountFile);
+
+      const res = await fetch('/api/dsystem/bulk-sync/preview/dsystemaccount', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseErrorText(res));
+      }
+
+      const data = await res.json();
+      setDsystemAccountPreview(data);
+    } catch (err) {
+      setBulkError(err.message || 'dsystemaccount 미리보기 처리에 실패했습니다.');
+    } finally {
+      setPreviewingAccount(false);
+    }
+  };
+
+  const handleGoToDSystemAccountStep = () => {
+    if (!dsystemNoChange && !dsystemPreview) {
+      setBulkError('dsystem 미리보기를 먼저 실행하거나 변동 없음을 선택해 주세요.');
+      return;
+    }
+    setBulkError('');
+    setBulkStep('dsystemaccount');
+  };
+
+  const handleGoToConfirmStep = () => {
+    if (!dsystemAccountPreview) {
+      setBulkError('dsystemaccount 미리보기를 먼저 실행해 주세요.');
+      return;
+    }
+    setBulkError('');
+    setBulkStep('confirm');
+  };
+
+  const handleApplyBulk = async () => {
+    if (!dsystemNoChange && !dsystemFile) {
+      setBulkError('dsystem 파일 또는 변동 없음 선택이 필요합니다.');
+      return;
+    }
+    if (!dsystemAccountFile) {
+      setBulkError('dsystemaccount 파일 업로드가 필요합니다.');
+      return;
+    }
+
+    setApplyingBulk(true);
+    setBulkError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('dsystemNoChange', String(dsystemNoChange));
+      if (!dsystemNoChange && dsystemFile) {
+        formData.append('dsystemFile', dsystemFile);
+      }
+
+      formData.append('dsystemAccountNoChange', 'false');
+      formData.append('dsystemAccountFile', dsystemAccountFile);
+
+      const res = await fetch('/api/dsystem/bulk-sync/apply', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(await parseErrorText(res));
+      }
+
+      const data = await res.json();
+      await fetchSystems();
+      closeBulkDialog();
+      alert(data.message || '엑셀 일괄 최신화가 완료되었습니다.');
+    } catch (err) {
+      setBulkError(err.message || '일괄 최신화 적용에 실패했습니다.');
+    } finally {
+      setApplyingBulk(false);
+    }
+  };
+
+  const renderChangeSummary = (preview) => {
+    if (!preview?.summary) return null;
+    const summary = preview.summary;
+    return (
+      <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap' }}>
+        <Chip color="success" label={`신규 ${summary.created ?? 0}건`} />
+        <Chip color="warning" label={`수정 ${summary.updated ?? 0}건`} />
+        <Chip color="error" label={`삭제 ${summary.deleted ?? 0}건`} />
+      </Stack>
+    );
+  };
+
+  const renderChangeTable = (preview) => {
+    if (!preview?.changes || preview.changes.length === 0) {
+      return <Typography variant="body2" color="text.secondary">변동 사항이 없습니다.</Typography>;
+    }
+
+    return (
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ whiteSpace: 'nowrap' }}>상태</TableCell>
+            <TableCell sx={{ whiteSpace: 'nowrap' }}>키</TableCell>
+            <TableCell sx={{ whiteSpace: 'nowrap' }}>변경 필드</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {preview.changes.map((row, idx) => (
+            <TableRow key={`${row.key}-${idx}`}>
+              <TableCell>
+                <Chip size="small" color={statusChipColor(row.status)} label={STATUS_TEXT[row.status] || row.status} />
+              </TableCell>
+              <TableCell>{row.key}</TableCell>
+              <TableCell>{(row.changedFields || []).join(', ') || '-'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
+
   const visibleColumns = [
     {
       field: 'customerName',
@@ -188,7 +532,6 @@ export default function CustomizedDataGrid() {
       flex: 1,
       sortable: false,
       filterable: false,
-
       renderHeader: () => (
         <FormControl size="small" fullWidth>
           <Select
@@ -201,7 +544,6 @@ export default function CustomizedDataGrid() {
             <MenuItem value="">
               <em>사이트명</em>
             </MenuItem>
-
             {customerList.map((customer) => (
               <MenuItem key={customer} value={customer}>
                 {customer}
@@ -211,7 +553,6 @@ export default function CustomizedDataGrid() {
         </FormControl>
       ),
     },
-
     { field: 'serviceNameMin', headerName: '서비스명', flex: 1, sortable: false, filterable: false },
     { field: 'systemNameMin', headerName: '시스템명', flex: 1, sortable: false, filterable: false },
     { field: 'hardwareName', headerName: '하드웨어', flex: 1, sortable: false, filterable: false },
@@ -252,7 +593,6 @@ export default function CustomizedDataGrid() {
             <MenuItem value="">
               <em>사이트명</em>
             </MenuItem>
-
             {customerList.map((customer) => (
               <MenuItem key={customer} value={customer}>
                 {customer}
@@ -264,16 +604,13 @@ export default function CustomizedDataGrid() {
       renderCell: (params) => (
         <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
           <div style={{ lineHeight: 1.4 }}>
-            <div style={{ fontWeight: 600 }}>
-              {params.row.customerName}
-            </div>
-
+            <div style={{ fontWeight: 600 }}>{params.row.customerName}</div>
             <div style={{ fontSize: 12, color: '#666' }}>
               {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp}
             </div>
           </div>
         </div>
-      )
+      ),
     },
     {
       field: 'actions',
@@ -291,36 +628,28 @@ export default function CustomizedDataGrid() {
     },
   ];
 
-  useEffect(() => {
-    fetch('/api/dsystem')
-      .then((res) => res.json())
-      .then((data) => {
-        const mapped = data.map((item, index) => ({
-          id: index,
-          ...item
-        }));
-        setRows(mapped);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
-
   return (
     <>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={openExportDialog}>
+          엑셀 내보내기
+        </Button>
+        <Button variant="contained" startIcon={<FileUploadIcon />} onClick={openBulkDialog}>
+          엑셀 가져오기
+        </Button>
+      </Box>
+
       <DataGrid
-        rows={filteredRows}   // 🔥 변경됨
+        rows={filteredRows}
         columns={isMobile ? mobileColumns : visibleColumns}
+        loading={loading}
         localeText={koKR.components.MuiDataGrid.defaultProps.localeText}
         onRowClick={handleRowClick}
-        getRowClassName={(params) =>
-          params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd'
-        }
-        initialState={{
-          pagination: { paginationModel: { pageSize: 10 } },
-        }}
+        getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd')}
+        initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
         pageSizeOptions={[10, 20, 50]}
         disableColumnResize
-        disableColumnFilter   // 🔥 기본 필터 제거
+        disableColumnFilter
         rowHeight={52}
       />
 
@@ -359,7 +688,6 @@ export default function CustomizedDataGrid() {
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>패스워드</TableCell>
                 </TableRow>
               </TableHead>
-
               <TableBody>
                 {accountData.map((row, idx) => (
                   <TableRow key={idx}>
@@ -376,7 +704,6 @@ export default function CustomizedDataGrid() {
         </DialogContent>
       </Dialog>
 
-      {/* 수정 다이얼로그 */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>고객 정보 수정</DialogTitle>
         <DialogContent>
@@ -386,10 +713,28 @@ export default function CustomizedDataGrid() {
             <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
           </Box>
           <Box sx={{ mt: 2 }}>
-            <TextField label="하드웨어 정보" size="small" fullWidth multiline rows={2} value={editForm.hardwareInfo || ''} onChange={(e) => handleEditFormChange('hardwareInfo', e.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }} />
+            <TextField
+              label="하드웨어 정보"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={editForm.hardwareInfo || ''}
+              onChange={(e) => handleEditFormChange('hardwareInfo', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }}
+            />
           </Box>
           <Box sx={{ mt: 2 }}>
-            <TextField label="OS 정보" size="small" fullWidth multiline rows={2} value={editForm.osInfo || ''} onChange={(e) => handleEditFormChange('osInfo', e.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }} />
+            <TextField
+              label="OS 정보"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={editForm.osInfo || ''}
+              onChange={(e) => handleEditFormChange('osInfo', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }}
+            />
           </Box>
 
           <Divider sx={{ my: 2 }} />
@@ -417,6 +762,219 @@ export default function CustomizedDataGrid() {
           <Button variant="contained" onClick={handleSave} disabled={saving}>
             {saving ? '저장 중...' : '저장'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={bulkOpen} onClose={closeBulkDialog} fullWidth maxWidth="lg">
+        <DialogTitle>엑셀 일괄 최신화</DialogTitle>
+        <DialogContent>
+          {(previewingDSystem || previewingAccount || applyingBulk) && <LinearProgress sx={{ mb: 2 }} />}
+
+          {bulkError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {bulkError}
+            </Alert>
+          )}
+
+          {bulkStep === 'dsystem' && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={600}>1단계: dsystem 업로드</Typography>
+              <Typography variant="body2" color="text.secondary">
+                dsystem 엑셀을 먼저 업로드하거나, 변경 사항이 없다면 변동 없음으로 다음 단계로 이동할 수 있습니다.
+              </Typography>
+
+              <Paper
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDsystemDragging(false);
+                  handleDsystemFileSelected(e.dataTransfer.files?.[0] ?? null);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDsystemDragging(true);
+                }}
+                onDragLeave={() => setIsDsystemDragging(false)}
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
+                  border: '2px dashed',
+                  borderColor: isDsystemDragging ? 'primary.main' : 'divider',
+                  backgroundColor: isDsystemDragging ? 'action.hover' : 'transparent',
+                }}
+              >
+                <CloudUploadIcon fontSize="large" />
+                <Typography sx={{ mt: 1 }}>파일을 드래그하거나 클릭해서 업로드</Typography>
+                <Button component="label" variant="outlined" startIcon={<FileUploadIcon />} sx={{ mt: 2 }}>
+                  파일 선택
+                  <input
+                    hidden
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => handleDsystemFileSelected(e.target.files?.[0] ?? null)}
+                  />
+                </Button>
+              </Paper>
+
+              <Typography variant="body2" color="text.secondary">
+                선택 파일: {dsystemFile ? dsystemFile.name : '없음'}
+              </Typography>
+
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" onClick={handlePreviewDSystem} disabled={previewingDSystem}>
+                  dsystem 미리보기
+                </Button>
+                <Button variant="outlined" onClick={handleDSystemNoChange} disabled={previewingDSystem}>
+                  변동 없음
+                </Button>
+                <Button
+                  variant="text"
+                  onClick={handleGoToDSystemAccountStep}
+                  disabled={previewingDSystem || (!dsystemNoChange && !dsystemPreview)}
+                >
+                  다음
+                </Button>
+              </Stack>
+
+              {dsystemPreview && (
+                <Box>
+                  {renderChangeSummary(dsystemPreview)}
+                  {renderChangeTable(dsystemPreview)}
+                </Box>
+              )}
+            </Stack>
+          )}
+
+          {bulkStep === 'dsystemaccount' && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={600}>2단계: dsystemaccount 업로드</Typography>
+              <Typography variant="body2" color="text.secondary">
+                dsystemaccount 엑셀 업로드 후 기존 데이터와 비교 결과를 확인합니다.
+              </Typography>
+
+              <Paper
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDsystemAccountDragging(false);
+                  handleDsystemAccountFileSelected(e.dataTransfer.files?.[0] ?? null);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDsystemAccountDragging(true);
+                }}
+                onDragLeave={() => setIsDsystemAccountDragging(false)}
+                sx={{
+                  p: 3,
+                  textAlign: 'center',
+                  border: '2px dashed',
+                  borderColor: isDsystemAccountDragging ? 'primary.main' : 'divider',
+                  backgroundColor: isDsystemAccountDragging ? 'action.hover' : 'transparent',
+                }}
+              >
+                <CloudUploadIcon fontSize="large" />
+                <Typography sx={{ mt: 1 }}>파일을 드래그하거나 클릭해서 업로드</Typography>
+                <Button component="label" variant="outlined" startIcon={<FileUploadIcon />} sx={{ mt: 2 }}>
+                  파일 선택
+                  <input
+                    hidden
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => handleDsystemAccountFileSelected(e.target.files?.[0] ?? null)}
+                  />
+                </Button>
+              </Paper>
+
+              <Typography variant="body2" color="text.secondary">
+                선택 파일: {dsystemAccountFile ? dsystemAccountFile.name : '없음'}
+              </Typography>
+
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" onClick={handlePreviewDSystemAccount} disabled={previewingAccount}>
+                  dsystemaccount 미리보기
+                </Button>
+                <Button
+                  variant="text"
+                  onClick={handleGoToConfirmStep}
+                  disabled={previewingAccount || !dsystemAccountPreview}
+                >
+                  다음
+                </Button>
+                <Button variant="text" onClick={() => setBulkStep('dsystem')} disabled={previewingAccount}>
+                  이전 단계로
+                </Button>
+              </Stack>
+
+              {dsystemAccountPreview && (
+                <Box>
+                  {renderChangeSummary(dsystemAccountPreview)}
+                  {renderChangeTable(dsystemAccountPreview)}
+                </Box>
+              )}
+            </Stack>
+          )}
+
+          {bulkStep === 'confirm' && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={600}>3단계: 최종 확인</Typography>
+
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>dsystem</Typography>
+                {renderChangeSummary(dsystemPreview)}
+              </Box>
+
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>dsystemaccount</Typography>
+                {renderChangeSummary(dsystemAccountPreview)}
+              </Box>
+
+              <Alert severity="info">
+                최종 적용 시 신규/수정/삭제가 즉시 반영되고 고객 정보 데이터 그리드가 최신화됩니다.
+              </Alert>
+            </Stack>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={closeBulkDialog} disabled={applyingBulk}>닫기</Button>
+          {bulkStep === 'confirm' ? (
+            <Button variant="contained" onClick={handleApplyBulk} disabled={applyingBulk}>
+              {applyingBulk ? '적용 중...' : '최신화 실행'}
+            </Button>
+          ) : null}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={exportOpen} onClose={closeExportDialog} fullWidth maxWidth="xs">
+        <DialogTitle>엑셀 내보내기</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {customerFilter ? `현재 선택된 고객사(${customerFilter}) 기준으로 다운로드합니다.` : '전체 고객사 기준으로 다운로드합니다.'}
+          </Typography>
+          {exportError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {exportError}
+            </Alert>
+          )}
+          <Stack spacing={1.5}>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              disabled={exportingDSystem || exportingDSystemAccount}
+              onClick={() => handleExportDownload('dsystem')}
+            >
+              {exportingDSystem ? '다운로드 중...' : 'dsystem 다운로드'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<DownloadIcon />}
+              disabled={exportingDSystem || exportingDSystemAccount}
+              onClick={() => handleExportDownload('dsystemaccount')}
+            >
+              {exportingDSystemAccount ? '다운로드 중...' : 'dsystemaccount 다운로드'}
+            </Button>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeExportDialog} disabled={exportingDSystem || exportingDSystemAccount}>닫기</Button>
         </DialogActions>
       </Dialog>
     </>

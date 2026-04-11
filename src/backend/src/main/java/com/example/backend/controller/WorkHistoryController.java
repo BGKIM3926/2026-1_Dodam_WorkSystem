@@ -88,6 +88,28 @@ public class WorkHistoryController {
         return service.save(history);
     }
 
+    @PutMapping("/with-files/{id}")
+    public MaintenanceHistory updateWithFiles(
+            @PathVariable Long id,
+            @RequestPart("data") MaintenanceHistory request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "retainedAttachmentIds", required = false) List<Long> retainedAttachmentIds) throws IOException {
+
+        MaintenanceHistory history = service.getById(id);
+
+        history.setIssue(request.getIssue());
+        history.setIssueDetail(request.getIssueDetail());
+        history.setEquipment(request.getEquipment());
+        history.setCompletedDate(request.getCompletedDate());
+        history.setConstructionStartDate(request.getConstructionStartDate());
+        history.setConstructionEndDate(request.getConstructionEndDate());
+
+        MaintenanceHistory saved = service.save(history);
+        service.replaceAttachments(saved.getHistoryId(), retainedAttachmentIds, files);
+
+        return saved;
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         service.delete(id);

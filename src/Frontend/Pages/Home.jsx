@@ -1,4 +1,4 @@
-import AssignmentIcon from '@mui/icons-material/Assignment';
+﻿import AssignmentIcon from '@mui/icons-material/Assignment';
 import BuildIcon from '@mui/icons-material/Build';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -11,40 +11,45 @@ import {
     Chip,
     Container,
     Divider,
+    FormControl,
     List,
     ListItem,
     ListItemIcon,
     ListItemText,
+    MenuItem,
     Pagination,
+    Select,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    Typography
+    Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../Contexts/SelectedNodeContext';
 
 const workTypeColor = {
-    '정기점검': 'info',
-    '장애조치': 'error',
-    '기술지원': 'warning',
-    '구축': 'success',
+    정기점검: 'info',
+    장애조치: 'error',
+    기술지원: 'warning',
+    구축: 'success',
 };
 
 const workTypeIcon = {
-    '정기점검': <CalendarMonthIcon fontSize="small" />,
-    '장애조치': <ErrorOutlineIcon fontSize="small" />,
-    '기술지원': <BuildIcon fontSize="small" />,
-    '구축': <AssignmentIcon fontSize="small" />,
+    정기점검: <CalendarMonthIcon fontSize="small" />,
+    장애조치: <ErrorOutlineIcon fontSize="small" />,
+    기술지원: <BuildIcon fontSize="small" />,
+    구축: <AssignmentIcon fontSize="small" />,
 };
 
 export default function Home() {
     const [summary, setSummary] = useState({});
     const [missingInspections, setMissingInspections] = useState([]);
+    const [siteOptions, setSiteOptions] = useState([]);
+    const [selectedSite, setSelectedSite] = useState('');
     const [recentHistory, setRecentHistory] = useState([]);
     const [inspectionPage, setInspectionPage] = useState(1);
     const inspectionRowsPerPage = 10;
@@ -52,28 +57,41 @@ export default function Home() {
     const { setSelectedNode } = useSelectedNode();
 
     useEffect(() => {
-        const user = localStorage.getItem('loginUser');
-        if (!user) return;
-
-        const parsed = JSON.parse(user);
-        const workerId = parsed.id || parsed.userId;
-        if (!workerId) return;
-
-        fetch(`/api/stats/summary?workerId=${workerId}`)
-            .then(res => res.json())
-            .then(data => setSummary(data))
+        fetch('/api/stats/summary')
+            .then((res) => res.json())
+            .then((data) => setSummary(data))
             .catch(console.error);
 
-        fetch(`/api/stats/missing-inspections?workerId=${workerId}`)
-            .then(res => res.json())
-            .then(data => setMissingInspections(data))
+        fetch('/api/stats/missing-inspections')
+            .then((res) => res.json())
+            .then((data) => setMissingInspections(data))
             .catch(console.error);
 
-        fetch(`/api/stats/recent?workerId=${workerId}`)
-            .then(res => res.json())
-            .then(data => setRecentHistory(data))
+        fetch('/api/dsystem')
+            .then((res) => res.json())
+            .then((data) => {
+                const sites = [...new Set(data.map((item) => item.customerName).filter(Boolean))]
+                    .sort((a, b) => a.localeCompare(b, 'ko'));
+                setSiteOptions(sites);
+            })
+            .catch(console.error);
+
+        fetch('/api/stats/recent')
+            .then((res) => res.json())
+            .then((data) => setRecentHistory(data))
             .catch(console.error);
     }, []);
+
+    const filteredMissingInspections = selectedSite
+        ? missingInspections.filter((row) => row.region === selectedSite)
+        : missingInspections;
+
+    const pagedMissingInspections = filteredMissingInspections.slice(
+        (inspectionPage - 1) * inspectionRowsPerPage,
+        inspectionPage * inspectionRowsPerPage,
+    );
+
+    const inspectionPageCount = Math.ceil(filteredMissingInspections.length / inspectionRowsPerPage);
 
     const handleMissingInspectionRowClick = (row) => {
         const customerName = row.region;
@@ -91,6 +109,11 @@ export default function Home() {
         navigate(`/dashboard/workhistory?${params.toString()}`);
     };
 
+    const handleSiteChange = (event) => {
+        setSelectedSite(event.target.value);
+        setInspectionPage(1);
+    };
+
     const statCards = [
         {
             label: '전체 이력',
@@ -101,13 +124,6 @@ export default function Home() {
             link: '/dashboard/workhistory',
         },
         {
-            label: '이번 달 처리',
-            value: summary.monthlyCount ?? '-',
-            icon: <CalendarMonthIcon sx={{ fontSize: 32, color: 'info.main' }} />,
-            color: 'info.main',
-            bgColor: 'info.50',
-        },
-        {
             label: '미완료',
             value: summary.incompleteCount ?? '-',
             icon: <ErrorOutlineIcon sx={{ fontSize: 32, color: 'warning.main' }} />,
@@ -115,7 +131,7 @@ export default function Home() {
             bgColor: 'warning.50',
         },
         {
-            label: '점검 누락',
+            label: '점검 미실시',
             value: summary.missingInspectionCount ?? '-',
             icon: <WarningAmberIcon sx={{ fontSize: 32, color: 'error.main' }} />,
             color: 'error.main',
@@ -136,8 +152,7 @@ export default function Home() {
                 </Typography>
             </Box>
 
-            {/* 통계 카드 */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2 }}>
                 {statCards.map((card) => (
                     <Card
                         key={card.label}
@@ -146,11 +161,17 @@ export default function Home() {
                         onClick={card.link ? () => navigate(card.link) : undefined}
                     >
                         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                            <Box sx={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 52, height: 52, borderRadius: 2,
-                                backgroundColor: card.bgColor,
-                            }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 52,
+                                    height: 52,
+                                    borderRadius: 2,
+                                    backgroundColor: card.bgColor,
+                                }}
+                            >
                                 {card.icon}
                             </Box>
                             <Box>
@@ -166,84 +187,105 @@ export default function Home() {
                 ))}
             </Box>
 
-            {/* 점검 미실시 목록 */}
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2 }}>
-                        <WarningAmberIcon color="error" />
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                            이번 달 정기점검 미실시 목록
-                        </Typography>
-                        <Chip
-                            label={`${missingInspections.length}건`}
-                            color="error"
-                            size="small"
-                            sx={{ fontWeight: 600 }}
-                        />
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: 1,
+                            px: 3,
+                            py: 2,
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <WarningAmberIcon color="error" />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                                이번 달 정기점검 미실시 목록
+                            </Typography>
+                            <Chip
+                                label={`${filteredMissingInspections.length}건`}
+                                color="error"
+                                size="small"
+                                sx={{ fontWeight: 600 }}
+                            />
+                        </Box>
+                        <Box sx={{ ml: { xs: 0, sm: 'auto' }, minWidth: { xs: '100%', sm: 220 } }}>
+                            <FormControl size="small" fullWidth>
+                                <Select value={selectedSite} displayEmpty onChange={handleSiteChange}>
+                                    <MenuItem value="">전체 사이트</MenuItem>
+                                    {siteOptions.map((site) => (
+                                        <MenuItem key={site} value={site}>
+                                            {site}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                     </Box>
                     <Divider />
-                    {missingInspections.length > 0 ? (
+                    {filteredMissingInspections.length > 0 ? (
                         <>
-                        <TableContainer>
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow sx={{ backgroundColor: 'error.50' }}>
-                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 140 }}>사이트명</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 180 }}>서비스명</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 160 }}>최근 점검일</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {missingInspections
-                                        .slice((inspectionPage - 1) * inspectionRowsPerPage, inspectionPage * inspectionRowsPerPage)
-                                        .map((row, idx) => (
-                                        <TableRow
-                                            key={idx}
-                                            hover
-                                            onClick={() => handleMissingInspectionRowClick(row)}
-                                            sx={{
-                                                cursor: row.region && row.serviceName ? 'pointer' : 'default',
-                                                '&:hover': { backgroundColor: 'action.hover' }
-                                            }}
-                                        >
-                                            <TableCell sx={{ px: 3, py: 1.5 }}>{row.region || '-'}</TableCell>
-                                            <TableCell sx={{ px: 3, py: 1.5 }}>{row.serviceName || '-'}</TableCell>
-                                            <TableCell sx={{ px: 3, py: 1.5 }}>
-                                                {row.lastInspectionDate ? (
-                                                    <Typography variant="body2">{row.lastInspectionDate}</Typography>
-                                                ) : (
-                                                    <Chip label="기록 없음" size="small" color="default" variant="outlined" />
-                                                )}
-                                            </TableCell>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow sx={{ backgroundColor: 'error.50' }}>
+                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 140 }}>사이트명</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 180 }}>서비스명</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 160 }}>최근 점검일</TableCell>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                        {Math.ceil(missingInspections.length / inspectionRowsPerPage) > 1 && (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                                <Pagination
-                                    count={Math.ceil(missingInspections.length / inspectionRowsPerPage)}
-                                    page={inspectionPage}
-                                    onChange={(e, page) => setInspectionPage(page)}
-                                    color="primary"
-                                    size="small"
-                                />
-                            </Box>
-                        )}
+                                    </TableHead>
+                                    <TableBody>
+                                        {pagedMissingInspections.map((row, idx) => (
+                                            <TableRow
+                                                key={`${row.region}-${row.serviceName}-${idx}`}
+                                                hover
+                                                onClick={() => handleMissingInspectionRowClick(row)}
+                                                sx={{
+                                                    cursor: row.region && row.serviceName ? 'pointer' : 'default',
+                                                    '&:hover': { backgroundColor: 'action.hover' },
+                                                }}
+                                            >
+                                                <TableCell sx={{ px: 3, py: 1.5 }}>{row.region || '-'}</TableCell>
+                                                <TableCell sx={{ px: 3, py: 1.5 }}>{row.serviceName || '-'}</TableCell>
+                                                <TableCell sx={{ px: 3, py: 1.5 }}>
+                                                    {row.lastInspectionDate ? (
+                                                        <Typography variant="body2">{row.lastInspectionDate}</Typography>
+                                                    ) : (
+                                                        <Chip label="기록 없음" size="small" color="default" variant="outlined" />
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                            {inspectionPageCount > 1 && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                    <Pagination
+                                        count={inspectionPageCount}
+                                        page={inspectionPage}
+                                        onChange={(event, page) => setInspectionPage(page)}
+                                        color="primary"
+                                        size="small"
+                                    />
+                                </Box>
+                            )}
                         </>
                     ) : (
                         <Box sx={{ px: 3, py: 4, textAlign: 'center' }}>
                             <CheckCircleOutlineIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
                             <Typography color="text.secondary">
-                                이번 달 모든 서비스의 정기점검이 완료되었습니다.
+                                {selectedSite
+                                    ? `${selectedSite}의 이번 달 정기점검이 모두 완료되었습니다.`
+                                    : '이번 달 모든 서비스의 정기점검이 완료되었습니다.'}
                             </Typography>
                         </Box>
                     )}
                 </CardContent>
             </Card>
 
-            {/* 최근 등록 이력 */}
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
                     <Box sx={{ px: 3, py: 2 }}>
@@ -264,7 +306,7 @@ export default function Home() {
                                         {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}
                                     </ListItemIcon>
                                     <ListItemText
-                                        primary={
+                                        primary={(
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <Chip
                                                     label={item.workType}
@@ -276,8 +318,14 @@ export default function Home() {
                                                     {item.issue || '(내용 없음)'}
                                                 </Typography>
                                             </Box>
-                                        }
-                                        secondary={<Box sx={{ display: 'flex', gap: 1 }}><Typography variant="caption">{item.region || ''}</Typography><Typography variant="caption">/ {item.serviceName || ''}</Typography><Typography variant="caption">· {item.visitDate || ''}</Typography></Box>}
+                                        )}
+                                        secondary={(
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Typography variant="caption">{item.region || ''}</Typography>
+                                                <Typography variant="caption">/ {item.serviceName || ''}</Typography>
+                                                <Typography variant="caption">· {item.visitDate || ''}</Typography>
+                                            </Box>
+                                        )}
                                     />
                                 </ListItem>
                             ))}

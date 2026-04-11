@@ -11,4 +11,5 @@ public interface DSystemAccountRepository extends JpaRepository<DSystemAccount, 
 
     // 🔥 systemId로 계정 조회
     List<DSystemAccount> findBySystemId(int systemId);
+    List<DSystemAccount> findBySystemIdIn(List<Integer> systemIds);
 }

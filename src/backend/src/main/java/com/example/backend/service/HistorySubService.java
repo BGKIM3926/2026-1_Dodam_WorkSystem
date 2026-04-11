@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -87,5 +89,32 @@ public class HistorySubService {
 
             attachmentRepository.save(attachment);
         }
+    }
+
+    public void replaceAttachments(Long subId, List<Long> retainedAttachmentIds, List<MultipartFile> files) throws IOException {
+        Set<Long> retainedIds = retainedAttachmentIds == null
+                ? Set.of()
+                : new HashSet<>(retainedAttachmentIds);
+
+        List<Attachment> existingAttachments = attachmentRepository.findBySubId(subId);
+
+        for (Attachment attachment : existingAttachments) {
+            if (!retainedIds.contains(attachment.getAttachmentId())) {
+                deleteAttachmentFile(attachment);
+                attachmentRepository.delete(attachment);
+            }
+        }
+
+        if (files != null && !files.isEmpty()) {
+            saveAttachments(subId, files);
+        }
+    }
+
+    private void deleteAttachmentFile(Attachment attachment) throws IOException {
+        if (attachment.getFilePath() == null || attachment.getFilePath().isBlank()) {
+            return;
+        }
+
+        Files.deleteIfExists(Path.of(attachment.getFilePath()));
     }
 }
