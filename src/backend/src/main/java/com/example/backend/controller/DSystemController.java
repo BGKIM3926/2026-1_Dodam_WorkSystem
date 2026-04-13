@@ -61,6 +61,16 @@ public class DSystemController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/dsystem")
+    public ResponseEntity<?> createSystem(@RequestBody DSystemUpdateRequest request) {
+        try {
+            service.createSystemWithAccounts(request);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
+    }
+
     @GetMapping("/dsystem/export/dsystem")
     public ResponseEntity<byte[]> exportDSystemExcel(
             @RequestParam(required = false) String customerName

@@ -49,8 +49,9 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, canReg
                 sx={{
                     display: 'flex', 
                     gap: 1, 
-                    flexWrap: 'nowrap',
-                    overflow: 'visible'
+                    flexWrap: { xs: 'wrap', md: 'nowrap' },
+                    overflowX: { xs: 'auto', md: 'visible' },
+                    width: '100%'
                 }}
             >
                 <Chip 
@@ -58,30 +59,35 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, canReg
                     color={filter === '정기점검' ? 'primary' : 'default'}
                     size="large" 
                     label="정기점검" 
+                    sx={{ flexShrink: 0 }}
                 />
                 <Chip
                     onClick={() => setFilter('장애조치')}
                     color={filter === '장애조치' ? 'primary' : 'default'}
                     size="large"
                     label="장애조치"                    
+                    sx={{ flexShrink: 0 }}
                 />
                 <Chip
                     onClick={() => setFilter('기술지원')}
                     color={filter === '기술지원' ? 'primary' : 'default'}
                     size="large"
                     label="기술지원"
+                    sx={{ flexShrink: 0 }}
                 />
                 <Chip
                     onClick={() => setFilter('구축')}
                     color={filter === '구축' ? 'primary' : 'default'}
                     size="large"
                     label="구축"
+                    sx={{ flexShrink: 0 }}
                 />
                 <Chip
                     onClick={() => setFilter('기관정보')}
                     color={filter === '기관정보' ? 'primary' : 'default'}
                     size="large"
                     label="기관정보"
+                    sx={{ flexShrink: 0 }}
                 />
             </Box>
             

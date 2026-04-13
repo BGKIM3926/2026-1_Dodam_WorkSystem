@@ -31,7 +31,7 @@ const styles = {
         mb: 4,
     },
     title: {
-        fontSize: '32px',
+        fontSize: { xs: '28px', md: '32px' },
         fontWeight: 600,
         color: '#18181b',
         mb: 1,
@@ -123,12 +123,13 @@ const styles = {
     },
     buttonSection: {
         display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
         gap: '12px',
         justifyContent: 'space-between',
         mt: 5,
     },
     backButton: {
-        width: '140px',
+        width: { xs: '100%', sm: '140px' },
         height: '44px',
         borderRadius: '8px',
         border: '1.5px solid #e4e4e7',
@@ -142,7 +143,7 @@ const styles = {
         },
     },
     submitButton: {
-        width: '140px',
+        width: { xs: '100%', sm: '140px' },
         height: '44px',
         borderRadius: '8px',
         backgroundColor: '#2563eb',
@@ -304,7 +305,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                     <Box>
                         <Typography sx={styles.fieldLabel}>구축기간</Typography>
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
                                 <DatePicker
                                     label="시작일"
                                     value={form.constructionStartDate ? dayjs(form.constructionStartDate) : null}
@@ -382,7 +383,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
             
 
             {/* 버튼 영역 */}
-            <Stack direction="row" sx={styles.buttonSection}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={styles.buttonSection}>
                 <Button
                     startIcon={<ArrowBackIcon />}
                     onClick={() => navigate('/dashboard/workhistory')}

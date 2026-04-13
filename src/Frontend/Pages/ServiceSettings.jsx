@@ -17,6 +17,7 @@ import {
     TableCell,
     TableHead,
     TableRow,
+    TableContainer,
     Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
@@ -143,9 +144,9 @@ export default function ServiceSettings() {
             maxWidth={false}
             component="main"
             disableGutters
-            sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 3, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}
+            sx={{ display: 'flex', flexDirection: 'column', my: { xs: 10, md: 16 }, gap: 3, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}
         >
-            <Typography variant="h2" sx={{ mt: 4 }}>
+            <Typography variant="h2" sx={{ mt: { xs: 1, md: 4 } }}>
                 설정
             </Typography>
 
@@ -180,7 +181,8 @@ export default function ServiceSettings() {
                     </Typography>
                 </Stack>
 
-                <Table size="small">
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table size="small" sx={{ minWidth: { xs: 520, sm: 'auto' } }}>
                     <TableHead>
                         <TableRow>
                             <TableCell sx={{ width: 140 }}>
@@ -221,6 +223,7 @@ export default function ServiceSettings() {
                         )}
                     </TableBody>
                 </Table>
+                </TableContainer>
 
                 {pageCount > 1 && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
@@ -237,7 +240,8 @@ export default function ServiceSettings() {
                 {legacyRows.length === 0 ? (
                     <Typography color="text.secondary">등록된 서비스가 없습니다.</Typography>
                 ) : (
-                    <Table size="small">
+                    <TableContainer sx={{ overflowX: 'auto' }}>
+                    <Table size="small" sx={{ minWidth: { xs: 420, sm: 'auto' } }}>
                         <TableHead>
                             <TableRow>
                                 <TableCell>고객사</TableCell>
@@ -264,6 +268,7 @@ export default function ServiceSettings() {
                             ))}
                         </TableBody>
                     </Table>
+                    </TableContainer>
                 )}
             </Paper>
 

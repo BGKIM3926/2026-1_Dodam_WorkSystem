@@ -55,26 +55,26 @@ export default function UsersList({ rows, fetchUsers }) {
     };
 
     return (
-        <Grid container spacing={4} columns={16} sx={{ justifyContent: 'flex-start' }}>
+        <Grid container spacing={{ xs: 2, md: 4 }} columns={16} sx={{ justifyContent: 'flex-start' }}>
             {rows.map((row) => (
                 <Grid size={{ xs: 16, sm: 16, md: 8 }} key={row.id}>
                     <Card sx={{ position: 'relative', height: '100%' }}>
-                        <CardContent>
+                        <CardContent sx={{ pr: 10 }}>
 
                             {/* 🔥 우측 버튼 */}
-                            <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 1 }}>
+                            <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5 }}>
                                 <IconButton onClick={() => {
                                     setSelectedRow(row);
                                     setForm({ ...row, password: '' });
                                     setOpenEdit(true);
-                                }}>
+                                }} size="small">
                                     <EditIcon />
                                 </IconButton>
 
                                 <IconButton onClick={() => {
                                     setSelectedRow(row);
                                     setOpenDelete(true);
-                                }}>
+                                }} size="small">
                                     <DeleteIcon />
                                 </IconButton>
                             </Box>
@@ -96,7 +96,7 @@ export default function UsersList({ rows, fetchUsers }) {
             ))}
 
             {/* 🔥 수정 Dialog */}
-            <Dialog open={openEdit} onClose={() => setOpenEdit(false)}>
+            <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="xs">
                 <DialogTitle>사용자 수정</DialogTitle>
 
                 <DialogContent>
@@ -141,7 +141,7 @@ export default function UsersList({ rows, fetchUsers }) {
             </Dialog>
 
             {/* 🔥 삭제 Dialog */}
-            <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
+            <Dialog open={openDelete} onClose={() => setOpenDelete(false)} fullWidth maxWidth="xs">
                 <DialogTitle>삭제 확인</DialogTitle>
 
                 <DialogContent>

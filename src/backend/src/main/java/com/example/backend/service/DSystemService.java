@@ -94,6 +94,62 @@ public class DSystemService {
         return repository.findAll().stream().map(this::toDto).toList();
     }
 
+    @Transactional
+    public void createSystemWithAccounts(DSystemUpdateRequest request) {
+        String customerName = trimToNull(request.getCustomerName());
+        String serviceNameMin = trimToNull(request.getServiceNameMin());
+        String systemNameMin = trimToNull(request.getSystemNameMin());
+
+        if (customerName == null) {
+            throw new IllegalArgumentException("사이트명은 필수 입력값입니다.");
+        }
+        if (serviceNameMin == null) {
+            throw new IllegalArgumentException("서비스명은 필수 입력값입니다.");
+        }
+        if (systemNameMin == null) {
+            throw new IllegalArgumentException("시스템명은 필수 입력값입니다.");
+        }
+
+        Long nextSystemId = repository.findMaxSystemId() + 1;
+        Long mappedServiceId = repository
+                .findFirstByCustomerNameAndServiceNameMinAndServiceIdIsNotNullOrderBySystemIdAsc(customerName, serviceNameMin)
+                .map(DSystem::getServiceId)
+                .orElseGet(() -> repository.findMaxServiceId() + 1);
+
+        DSystem system = new DSystem();
+        system.setSystemId(nextSystemId);
+        system.setCustomerName(customerName);
+        system.setServiceName(trimToNull(request.getServiceName()) == null ? serviceNameMin : trimToNull(request.getServiceName()));
+        system.setServiceNameMin(serviceNameMin);
+        system.setSystemName(trimToNull(request.getSystemName()) == null ? systemNameMin : trimToNull(request.getSystemName()));
+        system.setSystemNameMin(systemNameMin);
+        system.setHardwareName(trimToNull(request.getHardwareName()));
+        system.setHardwareInfo(trimToNull(request.getHardwareInfo()));
+        system.setOsName(trimToNull(request.getOsName()));
+        system.setOsIp(trimToNull(request.getOsIp()));
+        system.setOsInfo(trimToNull(request.getOsInfo()));
+        system.setServiceId(mappedServiceId);
+        repository.save(system);
+
+        if (request.getAccounts() == null) {
+            return;
+        }
+
+        for (DSystemUpdateRequest.AccountItem item : request.getAccounts()) {
+            if (isAccountEmpty(item)) {
+                continue;
+            }
+            DSystemAccount account = new DSystemAccount();
+            account.setSystemId(nextSystemId.intValue());
+            account.setSystemType(trimToNull(item.getSystemType()));
+            account.setAccessType(trimToNull(item.getAccessType()));
+            account.setPortNumber(trimToNull(item.getPortNumber()));
+            account.setAccountId(trimToNull(item.getAccountId()));
+            account.setAccountPw(trimToNull(item.getAccountPw()));
+            accountRepository.save(account);
+        }
+    }
+
     public List<DSystemDto> getByService(String serviceName, String customerName) {
         return repository
                 .findByServiceNameMinAndCustomerName(serviceName, customerName)
@@ -215,5 +271,27 @@ public class DSystemService {
 
     private String valueOf(Object value) {
         return value == null ? "" : String.valueOf(value);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isAccountEmpty(DSystemUpdateRequest.AccountItem item) {
+        if (item == null) {
+            return true;
+        }
+
+        return java.util.stream.Stream.of(
+                item.getSystemType(),
+                item.getAccessType(),
+                item.getPortNumber(),
+                item.getAccountId(),
+                item.getAccountPw()
+        ).allMatch(value -> value == null || value.trim().isEmpty());
     }
 }

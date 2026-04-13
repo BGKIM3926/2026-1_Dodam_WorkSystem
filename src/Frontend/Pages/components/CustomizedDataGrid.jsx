@@ -1,4 +1,4 @@
-import AddIcon from '@mui/icons-material/Add';
+﻿import AddIcon from '@mui/icons-material/Add';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -24,6 +24,7 @@ import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
@@ -51,6 +52,28 @@ const isExcelFile = (file) => {
   return lower.endsWith('.xlsx') || lower.endsWith('.xls');
 };
 
+const createEmptySystemForm = () => ({
+  customerName: '',
+  serviceName: '',
+  serviceNameMin: '',
+  systemName: '',
+  systemNameMin: '',
+  hardwareName: '',
+  hardwareInfo: '',
+  osName: '',
+  osIp: '',
+  osInfo: '',
+});
+
+const createEmptyAccount = () => ({
+  _key: Date.now() + Math.random(),
+  systemType: '',
+  accessType: '',
+  portNumber: '',
+  accountId: '',
+  accountPw: '',
+});
+
 export default function CustomizedDataGrid() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +91,10 @@ export default function CustomizedDataGrid() {
   const [editForm, setEditForm] = useState({});
   const [editAccounts, setEditAccounts] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState(createEmptySystemForm());
+  const [addAccounts, setAddAccounts] = useState([]);
+  const [adding, setAdding] = useState(false);
 
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkStep, setBulkStep] = useState('dsystem');
@@ -86,6 +113,21 @@ export default function CustomizedDataGrid() {
   const [exportError, setExportError] = useState('');
   const [exportingDSystem, setExportingDSystem] = useState(false);
   const [exportingDSystemAccount, setExportingDSystemAccount] = useState(false);
+
+  const responsiveFormGridSx = {
+    display: 'grid',
+    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+    gap: 2,
+    mt: 1,
+  };
+
+  const accountRowSx = {
+    display: 'flex',
+    gap: 1,
+    mb: 1,
+    alignItems: 'center',
+    flexDirection: { xs: 'column', sm: 'row' },
+  };
 
   const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))];
 
@@ -161,8 +203,20 @@ export default function CustomizedDataGrid() {
     setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleAddFormChange = (field, value) => {
+    setAddForm((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleAccountChange = (index, field, value) => {
     setEditAccounts((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddAccountChange = (index, field, value) => {
+    setAddAccounts((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
@@ -172,14 +226,14 @@ export default function CustomizedDataGrid() {
   const handleAddAccount = () => {
     setEditAccounts((prev) => [
       ...prev,
-      {
-        _key: Date.now(),
-        systemType: '',
-        accessType: '',
-        portNumber: '',
-        accountId: '',
-        accountPw: '',
-      },
+      createEmptyAccount(),
+    ]);
+  };
+
+  const handleAddAccountForCreate = () => {
+    setAddAccounts((prev) => [
+      ...prev,
+      createEmptyAccount(),
     ]);
   };
 
@@ -187,29 +241,53 @@ export default function CustomizedDataGrid() {
     setEditAccounts((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleRemoveAddAccount = (index) => {
+    setAddAccounts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const openAddDialog = () => {
+    setAddForm(createEmptySystemForm());
+    setAddAccounts([]);
+    setAddOpen(true);
+  };
+
+  const validateRequiredNames = (form) => {
+    if (!form.customerName?.trim()) return '사이트명은 필수 입력값입니다.';
+    if (!form.serviceNameMin?.trim()) return '서비스명은 필수 입력값입니다.';
+    if (!form.systemNameMin?.trim()) return '시스템명은 필수 입력값입니다.';
+    return '';
+  };
+
+  const toSystemPayload = (form, accounts, includeAccountId) => ({
+    customerName: form.customerName,
+    serviceName: form.serviceName || form.serviceNameMin,
+    serviceNameMin: form.serviceNameMin,
+    systemName: form.systemName || form.systemNameMin,
+    systemNameMin: form.systemNameMin,
+    hardwareName: form.hardwareName,
+    hardwareInfo: form.hardwareInfo,
+    osName: form.osName,
+    osIp: form.osIp,
+    osInfo: form.osInfo,
+    accounts: accounts.map((acc) => {
+      const payload = {
+        systemType: acc.systemType,
+        accessType: acc.accessType,
+        portNumber: acc.portNumber,
+        accountId: acc.accountId,
+        accountPw: acc.accountPw,
+      };
+      if (includeAccountId) {
+        payload.id = acc.id != null ? acc.id : null;
+      }
+      return payload;
+    }),
+  });
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const body = {
-        customerName: editForm.customerName,
-        serviceName: editForm.serviceName,
-        serviceNameMin: editForm.serviceNameMin,
-        systemName: editForm.systemName,
-        systemNameMin: editForm.systemNameMin,
-        hardwareName: editForm.hardwareName,
-        hardwareInfo: editForm.hardwareInfo,
-        osName: editForm.osName,
-        osIp: editForm.osIp,
-        osInfo: editForm.osInfo,
-        accounts: editAccounts.map((acc) => ({
-          id: acc.id != null ? acc.id : null,
-          systemType: acc.systemType,
-          accessType: acc.accessType,
-          portNumber: acc.portNumber,
-          accountId: acc.accountId,
-          accountPw: acc.accountPw,
-        })),
-      };
+      const body = toSystemPayload(editForm, editAccounts, true);
 
       const res = await fetch(`/api/dsystem/${editForm.systemID}`, {
         method: 'PUT',
@@ -226,6 +304,37 @@ export default function CustomizedDataGrid() {
       alert('수정에 실패했습니다.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    const requiredMessage = validateRequiredNames(addForm);
+    if (requiredMessage) {
+      alert(requiredMessage);
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const body = toSystemPayload(addForm, addAccounts, false);
+      const res = await fetch('/api/dsystem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || '등록에 실패했습니다.');
+      }
+
+      await fetchSystems();
+      setAddOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || '등록에 실패했습니다.');
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -577,7 +686,7 @@ export default function CustomizedDataGrid() {
   const mobileColumns = [
     {
       field: 'customerName',
-      headerName: '고객명',
+      headerName: '고객 정보',
       flex: 1,
       sortable: false,
       filterable: false,
@@ -627,14 +736,16 @@ export default function CustomizedDataGrid() {
       ),
     },
   ];
-
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
-        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={openExportDialog}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+        <Button variant="contained" color="success" startIcon={<AddIcon />} onClick={openAddDialog} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          행 추가
+        </Button>
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={openExportDialog} sx={{ width: { xs: '100%', sm: 'auto' } }}>
           엑셀 내보내기
         </Button>
-        <Button variant="contained" startIcon={<FileUploadIcon />} onClick={openBulkDialog}>
+        <Button variant="contained" startIcon={<FileUploadIcon />} onClick={openBulkDialog} sx={{ width: { xs: '100%', sm: 'auto' } }}>
           엑셀 가져오기
         </Button>
       </Box>
@@ -646,15 +757,31 @@ export default function CustomizedDataGrid() {
         localeText={koKR.components.MuiDataGrid.defaultProps.localeText}
         onRowClick={handleRowClick}
         getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd')}
-        initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+        initialState={{ pagination: { paginationModel: { pageSize: isMobile ? 8 : 10 } } }}
         pageSizeOptions={[10, 20, 50]}
         disableColumnResize
         disableColumnFilter
-        rowHeight={52}
+        rowHeight={isMobile ? 104 : 52}
+        sx={{
+          '& .MuiDataGrid-columnHeaders': {
+            minHeight: isMobile ? 56 : undefined,
+            maxHeight: isMobile ? 56 : undefined,
+            fontSize: isMobile ? 14 : undefined,
+          },
+          '& .MuiDataGrid-cell': {
+            alignItems: isMobile ? 'flex-start' : 'center',
+            py: isMobile ? 1 : 0,
+            fontSize: isMobile ? 14 : undefined,
+            lineHeight: isMobile ? 1.35 : undefined,
+          },
+          '& .MuiDataGrid-footerContainer': {
+            minHeight: isMobile ? 44 : undefined,
+          },
+        }}
       />
 
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)} fullWidth>
-        <DialogContent>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           {selectedRow && (
             <>
               <Typography>
@@ -678,8 +805,9 @@ export default function CustomizedDataGrid() {
           {loadingAccount ? (
             <Typography>로딩 중...</Typography>
           ) : (
-            <Table size="small">
-              <TableHead>
+            <TableContainer sx={{ maxHeight: isMobile ? 280 : 'none' }}>
+              <Table size="small" stickyHeader={isMobile}>
+                <TableHead>
                 <TableRow>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>구분</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>접속방식</TableCell>
@@ -687,8 +815,8 @@ export default function CustomizedDataGrid() {
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>계정명</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>패스워드</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
+                </TableHead>
+                <TableBody>
                 {accountData.map((row, idx) => (
                   <TableRow key={idx}>
                     <TableCell>{row.systemType}</TableCell>
@@ -698,16 +826,114 @@ export default function CustomizedDataGrid() {
                     <TableCell>{row.accountPw}</TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
         </DialogContent>
       </Dialog>
 
+      <Dialog open={addOpen} onClose={() => setAddOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>고객 정보 등록</DialogTitle>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box sx={responsiveFormGridSx}>
+            <TextField
+              label="사이트명"
+              required
+              size="small"
+              value={addForm.customerName || ''}
+              onChange={(e) => handleAddFormChange('customerName', e.target.value)}
+            />
+            <TextField
+              label="서비스명"
+              required
+              size="small"
+              value={addForm.serviceNameMin || ''}
+              onChange={(e) => handleAddFormChange('serviceNameMin', e.target.value)}
+            />
+            <TextField
+              label="시스템명"
+              required
+              size="small"
+              value={addForm.systemNameMin || ''}
+              onChange={(e) => handleAddFormChange('systemNameMin', e.target.value)}
+            />
+            <TextField
+              label="서비스명(원본)"
+              size="small"
+              value={addForm.serviceName || ''}
+              onChange={(e) => handleAddFormChange('serviceName', e.target.value)}
+            />
+            <TextField
+              label="시스템명(원본)"
+              size="small"
+              value={addForm.systemName || ''}
+              onChange={(e) => handleAddFormChange('systemName', e.target.value)}
+            />
+          </Box>
+
+          <Box sx={{ ...responsiveFormGridSx, mt: 2 }}>
+            <TextField label="하드웨어명" size="small" value={addForm.hardwareName || ''} onChange={(e) => handleAddFormChange('hardwareName', e.target.value)} />
+            <TextField label="OS명" size="small" value={addForm.osName || ''} onChange={(e) => handleAddFormChange('osName', e.target.value)} />
+            <TextField label="IP" size="small" value={addForm.osIp || ''} onChange={(e) => handleAddFormChange('osIp', e.target.value)} />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              label="하드웨어 정보"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={addForm.hardwareInfo || ''}
+              onChange={(e) => handleAddFormChange('hardwareInfo', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }}
+            />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              label="OS 정보"
+              size="small"
+              fullWidth
+              multiline
+              rows={2}
+              value={addForm.osInfo || ''}
+              onChange={(e) => handleAddFormChange('osInfo', e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { height: 'auto' } }}
+            />
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="subtitle1" fontWeight={600}>계정 정보</Typography>
+            <Button size="small" startIcon={<AddIcon />} onClick={handleAddAccountForCreate}>추가</Button>
+          </Box>
+
+          {addAccounts.map((acc, idx) => (
+            <Box key={acc._key ?? idx} sx={accountRowSx}>
+              <TextField label="구분" size="small" fullWidth value={acc.systemType || ''} onChange={(e) => handleAddAccountChange(idx, 'systemType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="접속방식" size="small" fullWidth value={acc.accessType || ''} onChange={(e) => handleAddAccountChange(idx, 'accessType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="포트" size="small" fullWidth value={acc.portNumber || ''} onChange={(e) => handleAddAccountChange(idx, 'portNumber', e.target.value)} sx={{ flex: 0.7 }} />
+              <TextField label="계정명" size="small" fullWidth value={acc.accountId || ''} onChange={(e) => handleAddAccountChange(idx, 'accountId', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="패스워드" size="small" fullWidth value={acc.accountPw || ''} onChange={(e) => handleAddAccountChange(idx, 'accountPw', e.target.value)} sx={{ flex: 1 }} />
+              <IconButton size="small" color="error" onClick={() => handleRemoveAddAccount(idx)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddOpen(false)}>취소</Button>
+          <Button variant="contained" onClick={handleCreate} disabled={adding}>
+            {adding ? '등록 중...' : '등록'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>고객 정보 수정</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box sx={responsiveFormGridSx}>
             <TextField label="하드웨어명" size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
             <TextField label="OS명" size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
             <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
@@ -745,12 +971,12 @@ export default function CustomizedDataGrid() {
           </Box>
 
           {editAccounts.map((acc, idx) => (
-            <Box key={acc._key ?? idx} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-              <TextField label="구분" size="small" value={acc.systemType || ''} onChange={(e) => handleAccountChange(idx, 'systemType', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="접속방식" size="small" value={acc.accessType || ''} onChange={(e) => handleAccountChange(idx, 'accessType', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="포트" size="small" value={acc.portNumber || ''} onChange={(e) => handleAccountChange(idx, 'portNumber', e.target.value)} sx={{ flex: 0.7 }} />
-              <TextField label="계정명" size="small" value={acc.accountId || ''} onChange={(e) => handleAccountChange(idx, 'accountId', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="패스워드" size="small" value={acc.accountPw || ''} onChange={(e) => handleAccountChange(idx, 'accountPw', e.target.value)} sx={{ flex: 1 }} />
+            <Box key={acc._key ?? idx} sx={accountRowSx}>
+              <TextField label="구분" size="small" fullWidth value={acc.systemType || ''} onChange={(e) => handleAccountChange(idx, 'systemType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="접속방식" size="small" fullWidth value={acc.accessType || ''} onChange={(e) => handleAccountChange(idx, 'accessType', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="포트" size="small" fullWidth value={acc.portNumber || ''} onChange={(e) => handleAccountChange(idx, 'portNumber', e.target.value)} sx={{ flex: 0.7 }} />
+              <TextField label="계정명" size="small" fullWidth value={acc.accountId || ''} onChange={(e) => handleAccountChange(idx, 'accountId', e.target.value)} sx={{ flex: 1 }} />
+              <TextField label="패스워드" size="small" fullWidth value={acc.accountPw || ''} onChange={(e) => handleAccountChange(idx, 'accountPw', e.target.value)} sx={{ flex: 1 }} />
               <IconButton size="small" color="error" onClick={() => handleRemoveAccount(idx)}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
@@ -821,7 +1047,7 @@ export default function CustomizedDataGrid() {
 
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={handlePreviewDSystem} disabled={previewingDSystem}>
-                  dsystem 미리보기
+                  결과 미리보기
                 </Button>
                 <Button variant="outlined" onClick={handleDSystemNoChange} disabled={previewingDSystem}>
                   변동 없음
@@ -889,7 +1115,7 @@ export default function CustomizedDataGrid() {
 
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={handlePreviewDSystemAccount} disabled={previewingAccount}>
-                  dsystemaccount 미리보기
+                  결과 미리보기
                 </Button>
                 <Button
                   variant="text"
@@ -961,7 +1187,7 @@ export default function CustomizedDataGrid() {
               disabled={exportingDSystem || exportingDSystemAccount}
               onClick={() => handleExportDownload('dsystem')}
             >
-              {exportingDSystem ? '다운로드 중...' : 'dsystem 다운로드'}
+              {exportingDSystem ? '다운로드 중...' : '고객 정보 다운로드'}
             </Button>
             <Button
               variant="contained"
@@ -969,7 +1195,7 @@ export default function CustomizedDataGrid() {
               disabled={exportingDSystem || exportingDSystemAccount}
               onClick={() => handleExportDownload('dsystemaccount')}
             >
-              {exportingDSystemAccount ? '다운로드 중...' : 'dsystemaccount 다운로드'}
+              {exportingDSystemAccount ? '다운로드 중...' : '계정 정보 다운로드'}
             </Button>
           </Stack>
         </DialogContent>
@@ -980,3 +1206,5 @@ export default function CustomizedDataGrid() {
     </>
   );
 }
+
+

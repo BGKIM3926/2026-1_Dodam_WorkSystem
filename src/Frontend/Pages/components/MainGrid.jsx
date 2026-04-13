@@ -15,7 +15,7 @@ export default function MainGrid() {
       sx={{ display: 'flex', flexDirection: 'column', px: { xs: 2, sm: 3, md: 4 }, gap: 2 }}>
       {/* cards */}
       
-      <Typography component="h2" variant="h2" sx={{ mb: 2, mt: 4 }}>
+      <Typography component="h2" variant="h2" sx={{ mb: 2, mt: { xs: 1, md: 4 } }}>
         고객 정보
       </Typography>
       <Grid container spacing={2} columns={12}>

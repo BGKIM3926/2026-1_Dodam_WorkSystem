@@ -56,8 +56,8 @@ export default function Dashboard(props) {
               spacing={2}
               sx={{
                 alignItems: 'center',
-                mx: 3,
-                pb: 5,
+                mx: { xs: 1.5, sm: 2.5, md: 3 },
+                pb: { xs: 3, md: 5 },
                 mt: { xs: 8, md: 0 },
               }}
             >

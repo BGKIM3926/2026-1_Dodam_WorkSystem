@@ -23,7 +23,7 @@ const styles = {
         mb: 4,
     },
     title: {
-        fontSize: '32px',
+        fontSize: { xs: '28px', md: '32px' },
         fontWeight: 600,
         color: '#18181b',
         mb: 1,
@@ -89,12 +89,13 @@ const styles = {
     },
     buttonSection: {
         display: 'flex',
+        flexDirection: { xs: 'column', sm: 'row' },
         gap: '12px',
         justifyContent: 'space-between',
         mt: 5,
     },
     backButton: {
-        width: '140px',
+        width: { xs: '100%', sm: '140px' },
         height: '44px',
         borderRadius: '8px',
         border: '1.5px solid #e4e4e7',
@@ -108,7 +109,7 @@ const styles = {
         },
     },
     submitButton: {
-        width: '140px',
+        width: { xs: '100%', sm: '140px' },
         height: '44px',
         borderRadius: '8px',
         backgroundColor: '#2563eb',
@@ -207,7 +208,7 @@ export default function CreateUserForm({ form, setForm, onSubmit }) {
             </Box>
 
             {/* 버튼 */}
-            <Stack direction="row" sx={styles.buttonSection}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} sx={styles.buttonSection}>
                 <Button
                     startIcon={<ArrowBackIcon />}
                     onClick={() => navigate('/dashboard/users')}

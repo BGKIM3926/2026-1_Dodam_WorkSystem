@@ -90,6 +90,7 @@ export default function Home() {
         (inspectionPage - 1) * inspectionRowsPerPage,
         inspectionPage * inspectionRowsPerPage,
     );
+    
 
     const inspectionPageCount = Math.ceil(filteredMissingInspections.length / inspectionRowsPerPage);
 
@@ -144,9 +145,9 @@ export default function Home() {
             maxWidth={false}
             component="main"
             disableGutters
-            sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 3, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}
+            sx={{ display: 'flex', flexDirection: 'column', my: { xs: 10, md: 16 }, gap: 3, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}
         >
-            <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4, justifyContent: 'flex-start' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: { xs: 1, md: 4 }, justifyContent: 'flex-start' }}>
                 <Typography variant="h2" gutterBottom>
                     홈
                 </Typography>
@@ -195,7 +196,7 @@ export default function Home() {
                             alignItems: { xs: 'stretch', sm: 'center' },
                             flexDirection: { xs: 'column', sm: 'row' },
                             gap: 1,
-                            px: 3,
+                            px: { xs: 2, md: 3 },
                             py: 2,
                         }}
                     >
@@ -227,13 +228,13 @@ export default function Home() {
                     <Divider />
                     {filteredMissingInspections.length > 0 ? (
                         <>
-                            <TableContainer>
-                                <Table size="small">
+                            <TableContainer sx={{ overflowX: 'auto' }}>
+                                <Table size="small" sx={{ minWidth: { xs: 520, sm: 'auto' } }}>
                                     <TableHead>
                                         <TableRow sx={{ backgroundColor: 'error.50' }}>
-                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 140 }}>사이트명</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 180 }}>서비스명</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, px: 3, py: 1.5, minWidth: 160 }}>최근 점검일</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, px: { xs: 2, md: 3 }, py: 1.5, minWidth: 140 }}>사이트명</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, px: { xs: 2, md: 3 }, py: 1.5, minWidth: 180 }}>서비스명</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, px: { xs: 2, md: 3 }, py: 1.5, minWidth: 160 }}>최근 점검일</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -247,9 +248,9 @@ export default function Home() {
                                                     '&:hover': { backgroundColor: 'action.hover' },
                                                 }}
                                             >
-                                                <TableCell sx={{ px: 3, py: 1.5 }}>{row.region || '-'}</TableCell>
-                                                <TableCell sx={{ px: 3, py: 1.5 }}>{row.serviceName || '-'}</TableCell>
-                                                <TableCell sx={{ px: 3, py: 1.5 }}>
+                                                <TableCell sx={{ px: { xs: 2, md: 3 }, py: 1.5 }}>{row.region || '-'}</TableCell>
+                                                <TableCell sx={{ px: { xs: 2, md: 3 }, py: 1.5 }}>{row.serviceName || '-'}</TableCell>
+                                                <TableCell sx={{ px: { xs: 2, md: 3 }, py: 1.5 }}>
                                                     {row.lastInspectionDate ? (
                                                         <Typography variant="body2">{row.lastInspectionDate}</Typography>
                                                     ) : (
@@ -288,7 +289,7 @@ export default function Home() {
 
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
-                    <Box sx={{ px: 3, py: 2 }}>
+                    <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                             최근 등록 이력
                         </Typography>
@@ -300,7 +301,7 @@ export default function Home() {
                                 <ListItem
                                     key={item.historyId}
                                     divider={idx < recentHistory.length - 1}
-                                    sx={{ px: 3, py: 1.5, alignItems: 'center' }}
+                                    sx={{ px: { xs: 2, md: 3 }, py: 1.5, alignItems: 'center' }}
                                 >
                                     <ListItemIcon sx={{ minWidth: 36, mr: 1 }}>
                                         {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}
@@ -320,7 +321,7 @@ export default function Home() {
                                             </Box>
                                         )}
                                         secondary={(
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                                 <Typography variant="caption">{item.region || ''}</Typography>
                                                 <Typography variant="caption">/ {item.serviceName || ''}</Typography>
                                                 <Typography variant="caption">· {item.visitDate || ''}</Typography>

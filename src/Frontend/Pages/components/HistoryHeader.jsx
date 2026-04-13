@@ -2,8 +2,8 @@ import { Box, Typography } from '@mui/material';
 
 export default function HistoryHeader({ selectedNode, rows }) {
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: 4, justifyContent: 'flex-start' }}>
-            <Typography variant="h2" gutterBottom>
+        <Box sx={{ display: 'flex', flexDirection: 'column', mb: 2, mt: { xs: 1, md: 4 }, justifyContent: 'flex-start' }}>
+            <Typography variant="h2" gutterBottom sx={{ wordBreak: 'keep-all' }}>
                 {selectedNode
                     ? `${selectedNode.customerName} / ${selectedNode.serviceName}`
                     : '이력 관리'}

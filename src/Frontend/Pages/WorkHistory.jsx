@@ -142,11 +142,11 @@ export default function WorkHistory() {
                 maxWidth={false}
                 component="main"
                 disableGutters
-                sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
+                sx={{ display: 'flex', flexDirection: 'column', my: { xs: 10, md: 16 }, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
                 <HistoryHeader selectedNode={effectiveSelectedNode} rows={rows} />
                 {isGlobalView ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
-                        <Typography variant="h6" color="text.secondary">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: { xs: 220, md: 300 }, px: 1.5 }}>
+                        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
                             좌측 메뉴에서 사이트 / 서비스를 선택해주세요
                         </Typography>
                     </Box>

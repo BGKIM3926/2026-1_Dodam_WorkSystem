@@ -46,7 +46,7 @@ export default function UsersPage() {
         <Container
             maxWidth={false}
             component="main"
-            sx={{ display: 'flex', flexDirection: 'column', my: 16, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
+            sx={{ display: 'flex', flexDirection: 'column', my: { xs: 10, md: 16 }, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
             <UserHeader rows={rows} />
             <Box sx={{ mb: 2 }}>
                 <UsersActions onAdd={() => setOpenCreate(true)} />

@@ -16,6 +16,7 @@ import {
     Paper,
     TextField,
     Typography,
+    useMediaQuery,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { koKR } from '@mui/x-data-grid/locales';
@@ -230,7 +231,7 @@ function SubHistoryPanel({ historyId, expanded }) {
 
     return (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
-            <Box sx={{ pl: 4, pr: 2, py: 2, backgroundColor: 'action.hover', borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ pl: { xs: 2, md: 4 }, pr: { xs: 1.5, md: 2 }, py: 2, backgroundColor: 'action.hover', borderTop: '1px solid', borderColor: 'divider' }}>
                 {subRows.length === 0 && !showAddForm && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>등록된 진행사항이 없습니다.</Typography>}
 
                 {subRows.map((sub, index) => (
@@ -332,6 +333,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
     const [expandedRows, setExpandedRows] = useState({});
     const [editFiles, setEditFiles] = useState([]);
     const [retainedAttachments, setRetainedAttachments] = useState([]);
+    const isMobile = useMediaQuery('(max-width:900px)');
 
     const toggleExpand = (rowId) => {
         setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -548,7 +550,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
 
     return (
         <>
-            <Box>
+            <Box sx={{ width: '100%', overflowX: 'auto' }}>
                 <DataGrid
                     rows={displayRows}
                     columns={columns}
@@ -564,21 +566,32 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                     disableRowSelectionOnClick
                     disableColumnSorting
                     disableColumnFilter
-                    rowHeight={52}
+                    rowHeight={isMobile ? 46 : 52}
                     getRowClassName={(params) => (expandedRows[params.row.historyId] ? 'row-expanded' : '')}
                     sx={{
+                        minWidth: {
+                            xs: isManagerView ? 760 : isInspectionView ? 520 : isGlobalView ? 760 : 900,
+                            md: 'auto',
+                        },
                         '& .row-expanded': { backgroundColor: 'action.hover' },
                         '& .MuiDataGrid-cell[data-field="expand"]': { borderRight: 'none' },
                         '& .MuiDataGrid-columnHeader[data-field="expand"]': { borderRight: 'none' },
                         '& .MuiDataGrid-columnHeader[data-field="expand"] .MuiDataGrid-columnSeparator': { display: 'none' },
+                        '& .MuiDataGrid-columnHeaders': {
+                            minHeight: isMobile ? 42 : undefined,
+                            maxHeight: isMobile ? 42 : undefined,
+                        },
+                        '& .MuiDataGrid-cell': {
+                            fontSize: isMobile ? 13 : undefined,
+                        },
                     }}
                 />
 
                 {!isManagerView && !isGlobalView && !isInspectionView && rows.map((row) => (
                     <Collapse key={row.historyId} in={!!expandedRows[row.historyId]} timeout={300} unmountOnExit>
                         <Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                            <Box sx={{ px: 2, py: 1, backgroundColor: 'grey.100', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Typography variant="subtitle2">📥 {row.issue || '(제목 없음)'} · {row.visitDate}</Typography>
+                            <Box sx={{ px: 2, py: 1, backgroundColor: 'grey.100', display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
+                                <Typography variant="subtitle2" sx={{ wordBreak: 'break-word' }}>📥 {row.issue || '(제목 없음)'} · {row.visitDate}</Typography>
                                 <Button size="small" onClick={() => { setSelectedRow(row); setOpenDetail(true); }}>상세보기</Button>
                             </Box>
                             <SubHistoryPanel historyId={row.historyId} expanded />
