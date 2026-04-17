@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import com.example.backend.dto.WorkHistoryResponseDto;
 import com.example.backend.entity.Attachment;
@@ -123,8 +125,10 @@ public class WorkHistoryController {
         Path path = Paths.get(file.getFilePath());
         Resource resource = new UrlResource(path.toUri());
 
+        String encoded = UriUtils.encode(file.getFileName(), StandardCharsets.UTF_8);
+
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getFileName() + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
             .body(resource);
     }
 
