@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,13 +28,16 @@ public class WorkHistoryService {
     private final WorkHistoryRepository repository;
     private final AttachmentRepository attachmentRepository;
     private final LegacyServiceRepository legacyServiceRepository;
+    private final Path uploadRootDir;
     
     public WorkHistoryService(WorkHistoryRepository repository,
                               AttachmentRepository attachmentRepository,
-                              LegacyServiceRepository legacyServiceRepository) {
+                              LegacyServiceRepository legacyServiceRepository,
+                              @Value("${file.upload-root}") String uploadRoot) {
         this.repository = repository;
         this.attachmentRepository = attachmentRepository;
         this.legacyServiceRepository = legacyServiceRepository;
+        this.uploadRootDir = Path.of(uploadRoot).toAbsolutePath().normalize();
     }
 
     public List<WorkHistoryResponseDto> getHistoryByServiceId(Long serviceId) {
@@ -115,7 +119,7 @@ public class WorkHistoryService {
     }
 
     public void saveAttachments(Long historyId, List<MultipartFile> files) throws IOException {
-        Path uploadDir = Path.of(System.getProperty("user.dir"), "uploads");
+        Path uploadDir = uploadRootDir;
         Files.createDirectories(uploadDir);
 
         for (MultipartFile file : files) {

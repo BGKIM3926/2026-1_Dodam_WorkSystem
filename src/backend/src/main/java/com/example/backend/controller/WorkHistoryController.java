@@ -2,10 +2,12 @@ package com.example.backend.controller;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -38,10 +40,14 @@ public class WorkHistoryController {
 
     private final WorkHistoryService service;
     private final AttachmentRepository attachmentRepository;
+    private final Path uploadRootDir;
 
-    public WorkHistoryController(WorkHistoryService service, AttachmentRepository attachmentRepository) {
+    public WorkHistoryController(WorkHistoryService service,
+                                 AttachmentRepository attachmentRepository,
+                                 @Value("${file.upload-root}") String uploadRoot) {
         this.service = service;
         this.attachmentRepository = attachmentRepository;
+        this.uploadRootDir = Path.of(uploadRoot).toAbsolutePath().normalize();
     }
 
     @GetMapping
@@ -122,14 +128,51 @@ public class WorkHistoryController {
     public ResponseEntity<Resource> download(@PathVariable Long id) throws IOException {
         Attachment file = attachmentRepository.findById(id).orElseThrow();
 
-        Path path = Paths.get(file.getFilePath());
+        Path path = resolveAttachmentPath(file);
+        if (path == null || !Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
         Resource resource = new UrlResource(path.toUri());
+        if (!resource.exists() || !resource.isReadable()) {
+            return ResponseEntity.notFound().build();
+        }
 
         String encoded = UriUtils.encode(file.getFileName(), StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
             .body(resource);
+    }
+
+    private Path resolveAttachmentPath(Attachment attachment) {
+        if (attachment.getFilePath() == null || attachment.getFilePath().isBlank()) {
+            return null;
+        }
+
+        Path storedPath = Paths.get(attachment.getFilePath());
+        if (Files.exists(storedPath)) {
+            return storedPath;
+        }
+
+        String fileName = extractFileName(attachment.getFilePath());
+        if (fileName == null || fileName.isBlank()) {
+            return null;
+        }
+
+        Path migratedPath = uploadRootDir.resolve(fileName).normalize();
+        if (!migratedPath.startsWith(uploadRootDir)) {
+            return null;
+        }
+
+        return migratedPath;
+    }
+
+    private String extractFileName(String path) {
+        int slash = path.lastIndexOf('/');
+        int backslash = path.lastIndexOf('\\');
+        int cut = Math.max(slash, backslash);
+        return cut >= 0 ? path.substring(cut + 1) : path;
     }
 
     @org.springframework.web.bind.annotation.ExceptionHandler(IllegalStateException.class)
