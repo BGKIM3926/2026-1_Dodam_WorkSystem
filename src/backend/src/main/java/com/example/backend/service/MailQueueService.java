@@ -20,13 +20,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.dto.MailRequestDto;
 import com.example.backend.dto.MailResponseDto;
 import com.example.backend.entity.MailQueueRequest;
 import com.example.backend.entity.MailReport;
+import com.example.backend.entity.ResourceStatus;
+import com.example.backend.entity.SystemStatus;
 import com.example.backend.repository.MailReportRepository;
 import com.example.backend.repository.MailQueueRequestRepository;
+import com.example.backend.repository.SystemStatusRepository;
 
 @Service
 public class MailQueueService {
@@ -35,6 +39,8 @@ public class MailQueueService {
 
     private static final int MAX_SYSTEM_ID_LENGTH = 100;
     private static final int MAX_BODY_LENGTH = 65535;
+    private static final BigDecimal WARNING_THRESHOLD = BigDecimal.valueOf(80);
+    private static final BigDecimal DANGER_THRESHOLD = BigDecimal.valueOf(95);
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
     private static final DateTimeFormatter INSPECTION_TIME_FORMAT =
@@ -55,18 +61,22 @@ public class MailQueueService {
 
     private final MailQueueRequestRepository mailQueueRequestRepository;
     private final MailReportRepository mailReportRepository;
+    private final SystemStatusRepository systemStatusRepository;
 
     @Value("${mail.queue-dir:mail-queue}")
     private String queueDir;
 
     public MailQueueService(
             MailQueueRequestRepository mailQueueRequestRepository,
-            MailReportRepository mailReportRepository
+            MailReportRepository mailReportRepository,
+            SystemStatusRepository systemStatusRepository
     ) {
         this.mailQueueRequestRepository = mailQueueRequestRepository;
         this.mailReportRepository = mailReportRepository;
+        this.systemStatusRepository = systemStatusRepository;
     }
 
+    @Transactional
     public MailResponseDto enqueue(MailRequestDto request, String clientIp) {
         validate(request);
 
@@ -77,7 +87,8 @@ public class MailQueueService {
         mailQueueRequest.setBodyRaw(request.getBody());
         mailQueueRequest.setStatus("RECEIVED");
         mailQueueRequestRepository.save(mailQueueRequest);
-        saveMailReport(mailQueueRequest, request);
+        MailReport savedReport = saveMailReport(mailQueueRequest, request);
+        saveSystemStatus(savedReport, mailQueueRequest.getRequestId());
 
         try {
             Path queueFilePath = writeQueueFile(requestId, mailQueueRequest.getSystemId(), request.getBody(), clientIp);
@@ -164,7 +175,7 @@ public class MailQueueService {
         return message.substring(0, 1000);
     }
 
-    private void saveMailReport(MailQueueRequest mailQueueRequest, MailRequestDto request) {
+    private MailReport saveMailReport(MailQueueRequest mailQueueRequest, MailRequestDto request) {
         MailReport report = new MailReport();
         report.setRequestId(mailQueueRequest.getId());
         Long systemId = parseSystemId(request.getSystemId().trim())
@@ -191,10 +202,39 @@ public class MailQueueService {
         }
 
         try {
-            mailReportRepository.save(report);
+            return mailReportRepository.save(report);
         } catch (DataIntegrityViolationException e) {
             throw new IllegalStateException("mail_reports 저장에 실패했습니다. system_id/foreign key를 확인하세요.");
         }
+    }
+
+    private void saveSystemStatus(MailReport report, String requestUuid) {
+        SystemStatus systemStatus = new SystemStatus();
+        systemStatus.setRequestId(report.getRequestId());
+        systemStatus.setMemStatus(calculateResourceStatus(report.getMemUsage()));
+        systemStatus.setDiskStatus(calculateResourceStatus(report.getDiskUsage()));
+
+        try {
+            systemStatusRepository.save(systemStatus);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalStateException("system_status 저장에 실패했습니다. request_id foreign key를 확인하세요.");
+        } catch (RuntimeException e) {
+            log.error("system_status 저장 중 오류(requestId={}): {}", requestUuid, e.getMessage());
+            throw e;
+        }
+    }
+
+    private ResourceStatus calculateResourceStatus(BigDecimal usagePercent) {
+        if (usagePercent == null) {
+            return ResourceStatus.UNKNOWN;
+        }
+        if (usagePercent.compareTo(DANGER_THRESHOLD) >= 0) {
+            return ResourceStatus.DANGER;
+        }
+        if (usagePercent.compareTo(WARNING_THRESHOLD) >= 0) {
+            return ResourceStatus.WARNING;
+        }
+        return ResourceStatus.NORMAL;
     }
 
     private ParsedInspectionData parseInspectionBody(String bodyRaw) {
