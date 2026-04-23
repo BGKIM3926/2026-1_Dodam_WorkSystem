@@ -58,6 +58,8 @@ public class MailQueueService {
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
     private static final DateTimeFormatter INSPECTION_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter HTML_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String DEFAULT_DISK_NAME = "TOTAL";
 
     private static final Pattern INSPECTION_TIME_PATTERN =
@@ -129,7 +131,7 @@ public class MailQueueService {
         saveSystemStatus(origin.getOriginId(), parsed, receivedAt);
 
         try {
-            writeQueueFile(requestId, request.getSystemId().trim(), request.getBody(), clientIp);
+            writeQueueHtmlFile(requestId, request.getSystemId().trim(), receivedAt);
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
             throw new IllegalStateException("메일 큐 파일 저장에 실패했습니다.");
@@ -157,17 +159,17 @@ public class MailQueueService {
         }
     }
 
-    private Path writeQueueFile(String requestId, String systemId, String body, String clientIp) throws IOException {
+    private Path writeQueueHtmlFile(String requestId, String systemId, LocalDateTime generatedAt) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
 
         OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
         String safeSystemId = sanitizeSystemId(systemId);
-        String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".txt";
+        String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".html";
         Path filePath = resolvedQueueDir.resolve(fileName);
 
-        String text = buildTextPayload(requestId, systemId, body, clientIp, nowUtc);
-        Files.writeString(filePath, text, StandardCharsets.UTF_8);
+        String html = buildHtmlPayload(systemStatusRepository.findLatestQueueStatusRows(), generatedAt);
+        Files.writeString(filePath, html, StandardCharsets.UTF_8);
         return filePath;
     }
 
@@ -179,16 +181,115 @@ public class MailQueueService {
         return Path.of(System.getProperty("user.dir")).resolve(dirPath).normalize();
     }
 
-    private String buildTextPayload(String requestId, String systemId, String body, String clientIp, OffsetDateTime nowUtc) {
-        String resolvedClientIp = (clientIp == null || clientIp.isBlank()) ? "unknown" : clientIp;
-        return "request_id: " + requestId + System.lineSeparator()
-                + "system_id: " + systemId + System.lineSeparator()
-                + "received_at: " + nowUtc + System.lineSeparator()
-                + "client_ip: " + resolvedClientIp + System.lineSeparator()
-                + System.lineSeparator()
-                + "[body]" + System.lineSeparator()
-                + body
-                + System.lineSeparator();
+    private String buildHtmlPayload(List<SystemStatusRepository.QueueStatusRow> rows, LocalDateTime generatedAt) {
+        StringBuilder tbody = new StringBuilder();
+        if (rows == null || rows.isEmpty()) {
+            tbody.append("""
+                    <tr>
+                      <td colspan="4">데이터가 없습니다.</td>
+                    </tr>
+                    """);
+        } else {
+            int index = 1;
+            for (SystemStatusRepository.QueueStatusRow row : rows) {
+                String customerName = escapeHtml(row.getCustomerName());
+                String systemName = escapeHtml(row.getSystemName());
+                boolean isSafe = "SAFE".equalsIgnoreCase(row.getTotalStatus());
+                String statusText = isSafe ? "정상" : "비정상";
+                String statusClass = isSafe ? "ok" : "ng";
+
+                tbody.append("      <tr>\n")
+                        .append("        <td>").append(index++).append("</td>\n")
+                        .append("        <td class=\"left\">").append(customerName).append("</td>\n")
+                        .append("        <td class=\"left\">").append(systemName).append("</td>\n")
+                        .append("        <td class=\"").append(statusClass).append("\">").append(statusText).append("</td>\n")
+                        .append("      </tr>\n");
+            }
+        }
+
+        return """
+                <!doctype html>
+                <html lang="ko">
+                <head>
+                  <meta charset="UTF-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <title>점검 상태 보고서</title>
+                  <style>
+                    body {
+                      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+                      margin: 24px;
+                      color: #222;
+                      background: #fff;
+                    }
+                    h1 {
+                      margin: 0 0 8px;
+                      font-size: 22px;
+                    }
+                    .meta {
+                      margin-bottom: 16px;
+                      color: #666;
+                      font-size: 13px;
+                    }
+                    table {
+                      width: 100%;
+                      border-collapse: collapse;
+                      table-layout: fixed;
+                    }
+                    th, td {
+                      border: 1px solid #d9d9d9;
+                      padding: 10px 8px;
+                      text-align: center;
+                      font-size: 14px;
+                      word-break: keep-all;
+                    }
+                    th {
+                      background: #f5f7fa;
+                      font-weight: 700;
+                    }
+                    td.left {
+                      text-align: left;
+                    }
+                    .ok {
+                      color: #137333;
+                      font-weight: 700;
+                    }
+                    .ng {
+                      color: #b42318;
+                      font-weight: 700;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <h1>시스템 점검 상태</h1>
+                  <div class="meta">생성시각: %s</div>
+                
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width:70px;">번호</th>
+                        <th>고객명</th>
+                        <th>시스템명</th>
+                        <th style="width:120px;">점검 상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                %s    </tbody>
+                  </table>
+                </body>
+                </html>
+                """.formatted(HTML_TIME_FORMAT.format(generatedAt), tbody.toString());
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private String sanitizeSystemId(String systemId) {
