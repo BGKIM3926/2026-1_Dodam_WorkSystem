@@ -10,6 +10,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -63,8 +66,12 @@ public class MailQueueService {
             Pattern.compile("(?m)^\\s*-\\s*CPU\\s*사용률\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)%\\s*$");
     private static final Pattern MEMORY_PATTERN =
             Pattern.compile("(?m)^\\s*-\\s*메모리\\s*사용량\\s*:\\s*Total\\s*:\\s*(\\d+)MB\\s*,\\s*Used\\s*:\\s*(\\d+)MB\\s*,\\s*Available\\s*:\\s*(\\d+)MB\\s*\\(\\s*Usage\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)%\\s*\\)\\s*$");
-    private static final Pattern DISK_USAGE_PATTERN =
-            Pattern.compile("(?m)^\\s*-\\s*디스크\\s*사용률\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)%\\s*$");
+    private static final Pattern DISK_USAGE_LINE_PATTERN =
+            Pattern.compile("(?m)^\\s*-\\s*디스크\\s*사용률\\s*:\\s*(.+)\\s*$");
+    private static final Pattern DISK_SINGLE_USAGE_PATTERN =
+            Pattern.compile("^\\s*([0-9]+(?:\\.[0-9]+)?)%\\s*$");
+    private static final Pattern DISK_MULTI_USAGE_PATTERN =
+            Pattern.compile("^\\s*([^:,]+?)\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)%\\s*$");
     private static final Pattern POSTFIX_STATUS_PATTERN =
             Pattern.compile("(?m)^\\s*-\\s*Postfix\\s*\\(메일\\)\\s*:\\s*([A-Za-z]+)\\s*$");
     private static final Pattern NGINX_STATUS_PATTERN =
@@ -230,7 +237,6 @@ public class MailQueueService {
     private void saveUsageRows(Integer originId, ParsedInspectionData parsed) {
         float cpuUsage = asFloat(parsed.cpuUsage());
         float memUsage = asFloat(parsed.memUsage());
-        float diskUsage = asFloat(parsed.diskUsage());
 
         SystemCpuUsage cpu = new SystemCpuUsage();
         cpu.setOriginId(originId);
@@ -242,11 +248,13 @@ public class MailQueueService {
         mem.setMemUsage(memUsage);
         systemMemUsageRepository.save(mem);
 
-        SystemDiskUsage disk = new SystemDiskUsage();
-        disk.setOriginId(originId);
-        disk.setDiskName(DEFAULT_DISK_NAME);
-        disk.setDiskUsage(diskUsage);
-        systemDiskUsageRepository.save(disk);
+        for (DiskUsageItem diskUsageItem : resolveDiskUsagesForSave(parsed.diskUsages())) {
+            SystemDiskUsage disk = new SystemDiskUsage();
+            disk.setOriginId(originId);
+            disk.setDiskName(diskUsageItem.diskName());
+            disk.setDiskUsage(asFloat(diskUsageItem.usage()));
+            systemDiskUsageRepository.save(disk);
+        }
     }
 
     private void saveLogs(Integer originId, ParsedInspectionData parsed, LocalDateTime receivedAt) {
@@ -277,10 +285,12 @@ public class MailQueueService {
     }
 
     private void saveSystemStatus(Integer originId, ParsedInspectionData parsed, LocalDateTime receivedAt) {
+        BigDecimal maxDiskUsage = findMaxDiskUsage(parsed.diskUsages());
+
         SystemStatus systemStatus = new SystemStatus();
         systemStatus.setOriginId(originId);
         systemStatus.setMemStatus(calculateResourceStatus(parsed.memUsage()));
-        systemStatus.setDiskStatus(calculateResourceStatus(parsed.diskUsage()));
+        systemStatus.setDiskStatus(calculateResourceStatus(maxDiskUsage));
         systemStatus.setServiceStatus(calculateServiceStatus(parsed.postfixStatus(), parsed.nginxStatus()));
         systemStatus.setSecurityStatus(ServiceHealthStatus.SAFE);
         systemStatus.setTotalStatus(calculateTotalStatus(
@@ -370,6 +380,29 @@ public class MailQueueService {
         return value.floatValue();
     }
 
+    private List<DiskUsageItem> resolveDiskUsagesForSave(List<DiskUsageItem> diskUsages) {
+        if (diskUsages == null || diskUsages.isEmpty()) {
+            return List.of(new DiskUsageItem(DEFAULT_DISK_NAME, BigDecimal.ZERO));
+        }
+        return diskUsages;
+    }
+
+    private BigDecimal findMaxDiskUsage(List<DiskUsageItem> diskUsages) {
+        if (diskUsages == null || diskUsages.isEmpty()) {
+            return null;
+        }
+        BigDecimal max = null;
+        for (DiskUsageItem item : diskUsages) {
+            if (item == null || item.usage() == null) {
+                continue;
+            }
+            if (max == null || item.usage().compareTo(max) > 0) {
+                max = item.usage();
+            }
+        }
+        return max;
+    }
+
     private ParsedInspectionData parseInspectionBody(String bodyRaw) {
         if (bodyRaw == null || bodyRaw.isBlank()) {
             throw new IllegalArgumentException("body_raw is empty");
@@ -396,9 +429,7 @@ public class MailQueueService {
             memUsage = toBigDecimal(memoryMatcher.group(4)).orElse(null);
         }
 
-        BigDecimal diskUsage = extractOptional(DISK_USAGE_PATTERN, bodyRaw, 1)
-                .flatMap(this::toBigDecimal)
-                .orElse(null);
+        List<DiskUsageItem> diskUsages = parseDiskUsages(bodyRaw);
 
         String postfixStatus = extractOptional(POSTFIX_STATUS_PATTERN, bodyRaw, 1)
                 .orElse(null);
@@ -413,11 +444,52 @@ public class MailQueueService {
                 memUsed,
                 memAvailable,
                 memUsage,
-                diskUsage,
+                diskUsages,
                 postfixStatus,
                 nginxStatus,
                 null
         );
+    }
+
+    private List<DiskUsageItem> parseDiskUsages(String bodyRaw) {
+        Optional<String> diskLine = extractOptional(DISK_USAGE_LINE_PATTERN, bodyRaw, 1);
+        if (diskLine.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String raw = diskLine.get().trim();
+        Matcher single = DISK_SINGLE_USAGE_PATTERN.matcher(raw);
+        if (single.matches()) {
+            return List.of(new DiskUsageItem(DEFAULT_DISK_NAME, toBigDecimal(single.group(1)).orElse(BigDecimal.ZERO)));
+        }
+
+        String[] segments = raw.split(",");
+        List<DiskUsageItem> diskUsages = new ArrayList<>();
+
+        for (String segment : segments) {
+            Matcher multi = DISK_MULTI_USAGE_PATTERN.matcher(segment.trim());
+            if (!multi.matches()) {
+                continue;
+            }
+            String diskName = normalizeDiskName(multi.group(1));
+            BigDecimal usage = toBigDecimal(multi.group(2)).orElse(null);
+            if (usage != null) {
+                diskUsages.add(new DiskUsageItem(diskName, usage));
+            }
+        }
+
+        if (diskUsages.isEmpty()) {
+            throw new IllegalArgumentException("disk_usage format is invalid");
+        }
+        return diskUsages;
+    }
+
+    private String normalizeDiskName(String rawName) {
+        String name = rawName == null ? "" : rawName.trim();
+        if (name.matches("^[A-Za-z]$")) {
+            return name.toUpperCase() + ":";
+        }
+        return name;
     }
 
     private Optional<String> extractRequired(Pattern pattern, String text, int group, String fieldName) {
@@ -482,10 +554,16 @@ public class MailQueueService {
             Integer memUsed,
             Integer memAvailable,
             BigDecimal memUsage,
-            BigDecimal diskUsage,
+            List<DiskUsageItem> diskUsages,
             String postfixStatus,
             String nginxStatus,
             String parseError
+    ) {
+    }
+
+    private record DiskUsageItem(
+            String diskName,
+            BigDecimal usage
     ) {
     }
 }
