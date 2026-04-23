@@ -39,6 +39,7 @@ yarn-error.log*
 Thumbs.db
 .turbo
 out/
+.gradle-local/
 
 npm-debug.log*
 yarn-debug.log*

@@ -1,7 +1,6 @@
 package com.example.backend.entity;
 
-public enum ResourceStatus {
+public enum ServiceHealthStatus {
     SAFE,
-    WARNING,
     DANGER
 }

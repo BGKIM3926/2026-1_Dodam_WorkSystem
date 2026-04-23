@@ -24,13 +24,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.dto.MailRequestDto;
 import com.example.backend.dto.MailResponseDto;
-import com.example.backend.entity.MailQueueRequest;
-import com.example.backend.entity.MailReport;
 import com.example.backend.entity.ResourceStatus;
+import com.example.backend.entity.ServiceHealthStatus;
+import com.example.backend.entity.SystemCpuUsage;
+import com.example.backend.entity.SystemDiskUsage;
+import com.example.backend.entity.SystemMemUsage;
+import com.example.backend.entity.SystemSecurityLog;
+import com.example.backend.entity.SystemServiceLog;
 import com.example.backend.entity.SystemStatus;
-import com.example.backend.repository.MailReportRepository;
-import com.example.backend.repository.MailQueueRequestRepository;
+import com.example.backend.entity.SystemStatusOrigin;
+import com.example.backend.repository.DSystemRepository;
+import com.example.backend.repository.SystemCpuUsageRepository;
+import com.example.backend.repository.SystemDiskUsageRepository;
+import com.example.backend.repository.SystemMemUsageRepository;
+import com.example.backend.repository.SystemSecurityLogRepository;
+import com.example.backend.repository.SystemServiceLogRepository;
 import com.example.backend.repository.SystemStatusRepository;
+import com.example.backend.repository.SystemStatusOriginRepository;
 
 @Service
 public class MailQueueService {
@@ -45,6 +55,7 @@ public class MailQueueService {
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
     private static final DateTimeFormatter INSPECTION_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String DEFAULT_DISK_NAME = "TOTAL";
 
     private static final Pattern INSPECTION_TIME_PATTERN =
             Pattern.compile("(?m)^\\s*점검\\s*일시\\s*:\\s*([0-9]{4}-[0-9]{2}-[0-9]{2}\\s+[0-9]{2}:[0-9]{2}:[0-9]{2})\\s*$");
@@ -59,20 +70,35 @@ public class MailQueueService {
     private static final Pattern NGINX_STATUS_PATTERN =
             Pattern.compile("(?m)^\\s*-\\s*Nginx\\s*\\(웹\\)\\s*:\\s*([A-Za-z]+)\\s*$");
 
-    private final MailQueueRequestRepository mailQueueRequestRepository;
-    private final MailReportRepository mailReportRepository;
+    private final DSystemRepository dSystemRepository;
+    private final SystemStatusOriginRepository systemStatusOriginRepository;
+    private final SystemCpuUsageRepository systemCpuUsageRepository;
+    private final SystemMemUsageRepository systemMemUsageRepository;
+    private final SystemDiskUsageRepository systemDiskUsageRepository;
+    private final SystemServiceLogRepository systemServiceLogRepository;
+    private final SystemSecurityLogRepository systemSecurityLogRepository;
     private final SystemStatusRepository systemStatusRepository;
 
     @Value("${mail.queue-dir:mail-queue}")
     private String queueDir;
 
     public MailQueueService(
-            MailQueueRequestRepository mailQueueRequestRepository,
-            MailReportRepository mailReportRepository,
+            DSystemRepository dSystemRepository,
+            SystemStatusOriginRepository systemStatusOriginRepository,
+            SystemCpuUsageRepository systemCpuUsageRepository,
+            SystemMemUsageRepository systemMemUsageRepository,
+            SystemDiskUsageRepository systemDiskUsageRepository,
+            SystemServiceLogRepository systemServiceLogRepository,
+            SystemSecurityLogRepository systemSecurityLogRepository,
             SystemStatusRepository systemStatusRepository
     ) {
-        this.mailQueueRequestRepository = mailQueueRequestRepository;
-        this.mailReportRepository = mailReportRepository;
+        this.dSystemRepository = dSystemRepository;
+        this.systemStatusOriginRepository = systemStatusOriginRepository;
+        this.systemCpuUsageRepository = systemCpuUsageRepository;
+        this.systemMemUsageRepository = systemMemUsageRepository;
+        this.systemDiskUsageRepository = systemDiskUsageRepository;
+        this.systemServiceLogRepository = systemServiceLogRepository;
+        this.systemSecurityLogRepository = systemSecurityLogRepository;
         this.systemStatusRepository = systemStatusRepository;
     }
 
@@ -81,26 +107,20 @@ public class MailQueueService {
         validate(request);
 
         String requestId = UUID.randomUUID().toString();
-        MailQueueRequest mailQueueRequest = new MailQueueRequest();
-        mailQueueRequest.setRequestId(requestId);
-        mailQueueRequest.setSystemId(request.getSystemId().trim());
-        mailQueueRequest.setBodyRaw(request.getBody());
-        mailQueueRequest.setStatus("RECEIVED");
-        mailQueueRequestRepository.save(mailQueueRequest);
-        MailReport savedReport = saveMailReport(mailQueueRequest, request);
-        saveSystemStatus(savedReport, mailQueueRequest.getRequestId());
+        LocalDateTime receivedAt = LocalDateTime.now();
+        Integer dsystemId = parseDSystemId(request.getSystemId().trim());
+        ensureDSystemExists(dsystemId.longValue());
+
+        ParsedInspectionData parsed = parseBodyOrNull(request.getBody(), requestId);
+        SystemStatusOrigin origin = saveOrigin(request.getBody(), dsystemId, receivedAt);
+        saveUsageRows(origin.getOriginId(), parsed);
+        saveLogs(origin.getOriginId(), parsed, receivedAt);
+        saveSystemStatus(origin.getOriginId(), parsed, receivedAt);
 
         try {
-            Path queueFilePath = writeQueueFile(requestId, mailQueueRequest.getSystemId(), request.getBody(), clientIp);
-            mailQueueRequest.setStatus("FILE_WRITTEN");
-            mailQueueRequest.setFilePath(queueFilePath.toString());
-            mailQueueRequest.setErrorMessage(null);
-            mailQueueRequestRepository.save(mailQueueRequest);
+            writeQueueFile(requestId, request.getSystemId().trim(), request.getBody(), clientIp);
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
-            mailQueueRequest.setStatus("FAILED");
-            mailQueueRequest.setErrorMessage(trimErrorMessage(e.getMessage()));
-            mailQueueRequestRepository.save(mailQueueRequest);
             throw new IllegalStateException("메일 큐 파일 저장에 실패했습니다.");
         }
     }
@@ -175,58 +195,114 @@ public class MailQueueService {
         return message.substring(0, 1000);
     }
 
-    private MailReport saveMailReport(MailQueueRequest mailQueueRequest, MailRequestDto request) {
-        MailReport report = new MailReport();
-        report.setRequestId(mailQueueRequest.getId());
-        Long systemId = parseSystemId(request.getSystemId().trim())
-                .orElseThrow(() -> new IllegalArgumentException("system_id는 숫자여야 합니다."));
-        report.setSystemId(systemId);
-
+    private ParsedInspectionData parseBodyOrNull(String body, String requestId) {
         try {
-            ParsedInspectionData parsed = parseInspectionBody(request.getBody());
-            report.setInspectionTime(parsed.inspectionTime());
-            report.setCpuUsage(parsed.cpuUsage());
-            report.setMemTotal(parsed.memTotal());
-            report.setMemUsed(parsed.memUsed());
-            report.setMemAvailable(parsed.memAvailable());
-            report.setMemUsage(parsed.memUsage());
-            report.setDiskUsage(parsed.diskUsage());
-            report.setPostfixStatus(parsed.postfixStatus());
-            report.setNginxStatus(parsed.nginxStatus());
-            report.setParseStatus("PARSED");
-            report.setParseError(null);
+            return parseInspectionBody(body);
         } catch (IllegalArgumentException e) {
-            report.setParseStatus("PARSE_FAILED");
-            report.setParseError(trimErrorMessage(e.getMessage()));
-            log.warn("메일 보고서 파싱 실패(requestId={}): {}", mailQueueRequest.getRequestId(), e.getMessage());
-        }
-
-        try {
-            return mailReportRepository.save(report);
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException("mail_reports 저장에 실패했습니다. system_id/foreign key를 확인하세요.");
+            log.warn("메일 보고서 파싱 실패(requestId={}): {}", requestId, e.getMessage());
+            return new ParsedInspectionData(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    trimErrorMessage(e.getMessage())
+            );
         }
     }
 
-    private void saveSystemStatus(MailReport report, String requestUuid) {
+    private SystemStatusOrigin saveOrigin(String bodyRaw, Integer dsystemId, LocalDateTime receivedAt) {
+        SystemStatusOrigin origin = new SystemStatusOrigin();
+        origin.setBodyRaw(bodyRaw);
+        origin.setDsystemId(dsystemId);
+        origin.setTime(receivedAt);
+        try {
+            return systemStatusOriginRepository.save(origin);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalStateException("system_status_origin 저장에 실패했습니다. dsystem_id foreign key를 확인하세요.");
+        }
+    }
+
+    private void saveUsageRows(Integer originId, ParsedInspectionData parsed) {
+        float cpuUsage = asFloat(parsed.cpuUsage());
+        float memUsage = asFloat(parsed.memUsage());
+        float diskUsage = asFloat(parsed.diskUsage());
+
+        SystemCpuUsage cpu = new SystemCpuUsage();
+        cpu.setOriginId(originId);
+        cpu.setCpuUsage(cpuUsage);
+        systemCpuUsageRepository.save(cpu);
+
+        SystemMemUsage mem = new SystemMemUsage();
+        mem.setOriginId(originId);
+        mem.setMemUsage(memUsage);
+        systemMemUsageRepository.save(mem);
+
+        SystemDiskUsage disk = new SystemDiskUsage();
+        disk.setOriginId(originId);
+        disk.setDiskName(DEFAULT_DISK_NAME);
+        disk.setDiskUsage(diskUsage);
+        systemDiskUsageRepository.save(disk);
+    }
+
+    private void saveLogs(Integer originId, ParsedInspectionData parsed, LocalDateTime receivedAt) {
+        if (parsed.parseError() != null && !parsed.parseError().isBlank()) {
+            SystemServiceLog parseErrorLog = new SystemServiceLog();
+            parseErrorLog.setOriginId(originId);
+            parseErrorLog.setLogDetail("PARSE_FAILED: " + parsed.parseError());
+            parseErrorLog.setTime(receivedAt);
+            systemServiceLogRepository.save(parseErrorLog);
+        }
+
+        if (parsed.postfixStatus() != null || parsed.nginxStatus() != null) {
+            SystemServiceLog serviceLog = new SystemServiceLog();
+            serviceLog.setOriginId(originId);
+            serviceLog.setLogDetail(String.format(
+                    "POSTFIX=%s, NGINX=%s",
+                    parsed.postfixStatus() == null ? "UNKNOWN" : parsed.postfixStatus(),
+                    parsed.nginxStatus() == null ? "UNKNOWN" : parsed.nginxStatus()));
+            serviceLog.setTime(receivedAt);
+            systemServiceLogRepository.save(serviceLog);
+        }
+
+        SystemSecurityLog securityLog = new SystemSecurityLog();
+        securityLog.setOriginId(originId);
+        securityLog.setLogDetail("SECURITY_STATUS=SAFE (no security parser input)");
+        securityLog.setTime(receivedAt);
+        systemSecurityLogRepository.save(securityLog);
+    }
+
+    private void saveSystemStatus(Integer originId, ParsedInspectionData parsed, LocalDateTime receivedAt) {
         SystemStatus systemStatus = new SystemStatus();
-        systemStatus.setRequestId(report.getRequestId());
-        systemStatus.setMemStatus(calculateResourceStatus(report.getMemUsage()));
-        systemStatus.setDiskStatus(calculateResourceStatus(report.getDiskUsage()));
+        systemStatus.setOriginId(originId);
+        systemStatus.setMemStatus(calculateResourceStatus(parsed.memUsage()));
+        systemStatus.setDiskStatus(calculateResourceStatus(parsed.diskUsage()));
+        systemStatus.setServiceStatus(calculateServiceStatus(parsed.postfixStatus(), parsed.nginxStatus()));
+        systemStatus.setSecurityStatus(ServiceHealthStatus.SAFE);
+        systemStatus.setTotalStatus(calculateTotalStatus(
+                systemStatus.getMemStatus(),
+                systemStatus.getDiskStatus(),
+                systemStatus.getServiceStatus(),
+                systemStatus.getSecurityStatus()));
+        systemStatus.setTime(parsed.inspectionTime() != null ? parsed.inspectionTime() : receivedAt);
 
         try {
             systemStatusRepository.save(systemStatus);
         } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException("system_status 저장에 실패했습니다. request_id foreign key를 확인하세요.");
+            throw new IllegalStateException("system_status 저장에 실패했습니다. origin_id foreign key를 확인하세요.");
         } catch (RuntimeException e) {
-            log.error("system_status 저장 중 오류(requestId={}): {}", requestUuid, e.getMessage());
+            log.error("system_status 저장 중 오류(originId={}): {}", originId, e.getMessage());
             throw e;
         }
     }
 
     private ResourceStatus calculateResourceStatus(BigDecimal usagePercent) {
         if (usagePercent == null) {
-            return ResourceStatus.UNKNOWN;
+            return ResourceStatus.WARNING;
         }
         if (usagePercent.compareTo(DANGER_THRESHOLD) >= 0) {
             return ResourceStatus.DANGER;
@@ -234,7 +310,64 @@ public class MailQueueService {
         if (usagePercent.compareTo(WARNING_THRESHOLD) >= 0) {
             return ResourceStatus.WARNING;
         }
-        return ResourceStatus.NORMAL;
+        return ResourceStatus.SAFE;
+    }
+
+    private ServiceHealthStatus calculateServiceStatus(String postfixStatus, String nginxStatus) {
+        if (isHealthyService(postfixStatus) && isHealthyService(nginxStatus)) {
+            return ServiceHealthStatus.SAFE;
+        }
+        return ServiceHealthStatus.DANGER;
+    }
+
+    private ServiceHealthStatus calculateTotalStatus(
+            ResourceStatus memStatus,
+            ResourceStatus diskStatus,
+            ServiceHealthStatus serviceStatus,
+            ServiceHealthStatus securityStatus) {
+        if (memStatus == ResourceStatus.SAFE
+                && diskStatus == ResourceStatus.SAFE
+                && serviceStatus == ServiceHealthStatus.SAFE
+                && securityStatus == ServiceHealthStatus.SAFE) {
+            return ServiceHealthStatus.SAFE;
+        }
+        return ServiceHealthStatus.DANGER;
+    }
+
+    private boolean isHealthyService(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = value.trim().toUpperCase();
+        return normalized.equals("OK")
+                || normalized.equals("ACTIVE")
+                || normalized.equals("RUNNING")
+                || normalized.equals("UP")
+                || normalized.equals("NORMAL")
+                || normalized.equals("SAFE");
+    }
+
+    private void ensureDSystemExists(Long systemId) {
+        if (!dSystemRepository.existsById(systemId)) {
+            throw new IllegalStateException("존재하지 않는 system_id입니다: " + systemId);
+        }
+    }
+
+    private Integer parseDSystemId(String value) {
+        Long parsed = parseSystemId(value)
+                .orElseThrow(() -> new IllegalArgumentException("system_id는 숫자여야 합니다."));
+        try {
+            return Math.toIntExact(parsed);
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("system_id가 허용 범위를 초과했습니다.");
+        }
+    }
+
+    private float asFloat(BigDecimal value) {
+        if (value == null) {
+            return 0.0f;
+        }
+        return value.floatValue();
     }
 
     private ParsedInspectionData parseInspectionBody(String bodyRaw) {
@@ -282,7 +415,8 @@ public class MailQueueService {
                 memUsage,
                 diskUsage,
                 postfixStatus,
-                nginxStatus
+                nginxStatus,
+                null
         );
     }
 
@@ -350,7 +484,8 @@ public class MailQueueService {
             BigDecimal memUsage,
             BigDecimal diskUsage,
             String postfixStatus,
-            String nginxStatus
+            String nginxStatus,
+            String parseError
     ) {
     }
 }
