@@ -29,6 +29,12 @@ public class SystemServiceLog {
     @Column(name = "origin_id", nullable = false)
     private Integer originId;
 
+    @Column(name = "service_name", nullable = false, length = 20)
+    private String serviceName;
+
+    @Column(name = "service_status", nullable = false, length = 20)
+    private String serviceStatus;
+
     @Column(name = "log_detail", nullable = false, columnDefinition = "TEXT")
     private String logDetail;
 

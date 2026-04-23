@@ -76,6 +76,10 @@ public class MailQueueService {
             Pattern.compile("(?m)^\\s*-\\s*Postfix\\s*\\(메일\\)\\s*:\\s*([A-Za-z]+)\\s*$");
     private static final Pattern NGINX_STATUS_PATTERN =
             Pattern.compile("(?m)^\\s*-\\s*Nginx\\s*\\(웹\\)\\s*:\\s*([A-Za-z]+)\\s*$");
+    private static final Pattern POSTFIX_SUMMARY_PATTERN =
+            Pattern.compile("(?s)\\[3\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Postfix\\)\\s*(.*?)(?=\\n\\s*\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)|\\z)");
+    private static final Pattern NGINX_SUMMARY_PATTERN =
+            Pattern.compile("(?s)\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)\\s*(.*)$");
 
     private final DSystemRepository dSystemRepository;
     private final SystemStatusOriginRepository systemStatusOriginRepository;
@@ -217,6 +221,8 @@ public class MailQueueService {
                     null,
                     null,
                     null,
+                    null,
+                    null,
                     trimErrorMessage(e.getMessage())
             );
         }
@@ -261,27 +267,37 @@ public class MailQueueService {
         if (parsed.parseError() != null && !parsed.parseError().isBlank()) {
             SystemServiceLog parseErrorLog = new SystemServiceLog();
             parseErrorLog.setOriginId(originId);
+            parseErrorLog.setServiceName("parser");
+            parseErrorLog.setServiceStatus("failed");
             parseErrorLog.setLogDetail("PARSE_FAILED: " + parsed.parseError());
             parseErrorLog.setTime(receivedAt);
             systemServiceLogRepository.save(parseErrorLog);
         }
 
-        if (parsed.postfixStatus() != null || parsed.nginxStatus() != null) {
-            SystemServiceLog serviceLog = new SystemServiceLog();
-            serviceLog.setOriginId(originId);
-            serviceLog.setLogDetail(String.format(
-                    "POSTFIX=%s, NGINX=%s",
-                    parsed.postfixStatus() == null ? "UNKNOWN" : parsed.postfixStatus(),
-                    parsed.nginxStatus() == null ? "UNKNOWN" : parsed.nginxStatus()));
-            serviceLog.setTime(receivedAt);
-            systemServiceLogRepository.save(serviceLog);
-        }
+        saveServiceLog(originId, "postfix", parsed.postfixStatus(), parsed.postfixLogSummary(), receivedAt);
+        saveServiceLog(originId, "nginx", parsed.nginxStatus(), parsed.nginxLogSummary(), receivedAt);
 
         SystemSecurityLog securityLog = new SystemSecurityLog();
         securityLog.setOriginId(originId);
         securityLog.setLogDetail("SECURITY_STATUS=SAFE (no security parser input)");
         securityLog.setTime(receivedAt);
         systemSecurityLogRepository.save(securityLog);
+    }
+
+    private void saveServiceLog(
+            Integer originId,
+            String serviceName,
+            String serviceStatus,
+            String logDetail,
+            LocalDateTime receivedAt
+    ) {
+        SystemServiceLog serviceLog = new SystemServiceLog();
+        serviceLog.setOriginId(originId);
+        serviceLog.setServiceName(serviceName);
+        serviceLog.setServiceStatus(normalizeServiceStatus(serviceStatus));
+        serviceLog.setLogDetail(normalizeServiceLogDetail(logDetail));
+        serviceLog.setTime(receivedAt);
+        systemServiceLogRepository.save(serviceLog);
     }
 
     private void saveSystemStatus(Integer originId, ParsedInspectionData parsed, LocalDateTime receivedAt) {
@@ -380,6 +396,20 @@ public class MailQueueService {
         return value.floatValue();
     }
 
+    private String normalizeServiceStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "unknown";
+        }
+        return status.trim().toLowerCase();
+    }
+
+    private String normalizeServiceLogDetail(String detail) {
+        if (detail == null || detail.isBlank()) {
+            return "(no summary)";
+        }
+        return detail.trim();
+    }
+
     private List<DiskUsageItem> resolveDiskUsagesForSave(List<DiskUsageItem> diskUsages) {
         if (diskUsages == null || diskUsages.isEmpty()) {
             return List.of(new DiskUsageItem(DEFAULT_DISK_NAME, BigDecimal.ZERO));
@@ -437,6 +467,12 @@ public class MailQueueService {
         String nginxStatus = extractOptional(NGINX_STATUS_PATTERN, bodyRaw, 1)
                 .orElse(null);
 
+        String postfixLogSummary = extractOptional(POSTFIX_SUMMARY_PATTERN, bodyRaw, 1)
+                .orElse(null);
+
+        String nginxLogSummary = extractOptional(NGINX_SUMMARY_PATTERN, bodyRaw, 1)
+                .orElse(null);
+
         return new ParsedInspectionData(
                 inspectionTime,
                 cpuUsage,
@@ -447,6 +483,8 @@ public class MailQueueService {
                 diskUsages,
                 postfixStatus,
                 nginxStatus,
+                postfixLogSummary,
+                nginxLogSummary,
                 null
         );
     }
@@ -557,6 +595,8 @@ public class MailQueueService {
             List<DiskUsageItem> diskUsages,
             String postfixStatus,
             String nginxStatus,
+            String postfixLogSummary,
+            String nginxLogSummary,
             String parseError
     ) {
     }
