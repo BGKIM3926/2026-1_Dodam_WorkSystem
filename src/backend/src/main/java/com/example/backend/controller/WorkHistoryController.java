@@ -5,9 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -75,11 +73,9 @@ public class WorkHistoryController {
         @RequestPart("data") MaintenanceHistory history,
         @RequestPart(value = "files", required = false) List<MultipartFile> files,
         @RequestPart(value = "files[]", required = false) List<MultipartFile> filesArray,
-        @RequestParam(value = "files", required = false) List<MultipartFile> filesFromParam,
-        @RequestParam(value = "files[]", required = false) List<MultipartFile> filesArrayFromParam,
         @RequestParam(value = "expectedFileCount", required = false) Integer expectedFileCount
     ) throws IOException {
-        List<MultipartFile> uploadedFiles = mergeFiles(files, filesArray, filesFromParam, filesArrayFromParam);
+        List<MultipartFile> uploadedFiles = mergeFiles(files, filesArray);
         int expected = expectedFileCount == null ? 0 : expectedFileCount;
         int received = uploadedFiles.size();
 
@@ -193,20 +189,13 @@ public class WorkHistoryController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 
-    @SafeVarargs
-    private static List<MultipartFile> mergeFiles(List<MultipartFile>... fileLists) {
-        List<MultipartFile> merged = new ArrayList<>();
-        for (List<MultipartFile> list : fileLists) {
-            if (list == null || list.isEmpty()) {
-                continue;
-            }
-            for (MultipartFile file : list) {
-                if (file == null || file.isEmpty()) {
-                    continue;
-                }
-                merged.add(file);
-            }
+    private static List<MultipartFile> mergeFiles(List<MultipartFile> files, List<MultipartFile> filesArray) {
+        if (files != null && !files.isEmpty()) {
+            return files.stream().filter(file -> file != null && !file.isEmpty()).toList();
         }
-        return merged.stream().filter(Objects::nonNull).toList();
+        if (filesArray != null && !filesArray.isEmpty()) {
+            return filesArray.stream().filter(file -> file != null && !file.isEmpty()).toList();
+        }
+        return List.of();
     }
 }
