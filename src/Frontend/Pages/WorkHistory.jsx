@@ -160,7 +160,9 @@ export default function WorkHistory() {
                             startDate={startDate}
                             setStartDate={setStartDate}
                             endDate={endDate}
-                            setEndDate={setEndDate} />
+                            setEndDate={setEndDate}
+                            selectedNode={effectiveSelectedNode}
+                        />
                         <HistoryList 
                             rows={filter === '기관정보' ? managerRows : filteredRows} 
                             isGlobalView={isGlobalView} 

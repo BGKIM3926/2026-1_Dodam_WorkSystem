@@ -6,13 +6,20 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
-export default function HistoryActions({ filter, setFilter, isGlobalView, canRegister = true, startDate, setStartDate, endDate, setEndDate }) {
+export default function HistoryActions({
+    filter,
+    setFilter,
+    isGlobalView,
+    canRegister = true,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    selectedNode,
+}) {
 
     const navigate = useNavigate();
-
-    const { selectedNode } = useSelectedNode();
 
     const serviceName = selectedNode?.serviceName;
     const customerName = selectedNode?.customerName;
@@ -186,10 +193,15 @@ export default function HistoryActions({ filter, setFilter, isGlobalView, canReg
                                 return;
                             }
 
+                            const params = new URLSearchParams();
+                            if (customerName) params.set('customerName', customerName);
+                            if (serviceName) params.set('serviceName', serviceName);
+                            const suffix = params.toString() ? `?${params.toString()}` : '';
+
                             if (filter === '기관정보') {
-                                navigate('/dashboard/workhistory/createServiceManager');
+                                navigate(`/dashboard/workhistory/createServiceManager${suffix}`);
                             } else {
-                                navigate('/dashboard/workhistory/createWorkHistory');
+                                navigate(`/dashboard/workhistory/createWorkHistory${suffix}`);
                             }
                         }}
                     >

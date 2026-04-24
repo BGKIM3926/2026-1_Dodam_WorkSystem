@@ -1,11 +1,12 @@
 import { Alert, Box, Snackbar } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import ServiceManagerForm from './ServiceManagerForm';
 
 export default function CreateServiceManager() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { selectedNode } = useSelectedNode();
 
     const [form, setForm] = useState({
@@ -17,8 +18,10 @@ export default function CreateServiceManager() {
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
 
-    const serviceName = selectedNode?.serviceName;
-    const customerName = selectedNode?.customerName;
+    const serviceNameFromQuery = searchParams.get('serviceName');
+    const customerNameFromQuery = searchParams.get('customerName');
+    const serviceName = selectedNode?.serviceName ?? serviceNameFromQuery;
+    const customerName = selectedNode?.customerName ?? customerNameFromQuery;
     const [serviceId, setServiceId] = useState(null);
     const [isLegacyService, setIsLegacyService] = useState(false);
 

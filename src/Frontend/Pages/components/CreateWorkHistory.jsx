@@ -1,6 +1,6 @@
 import { Alert, Box, Snackbar } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import WorkHistoryForm from './WorkHistoryForm';
 
@@ -8,6 +8,7 @@ export default function CreateWorkHistory() {
     const REGULAR_CHECK = '정기점검';
 
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { selectedNode } = useSelectedNode();
 
     const [form, setForm] = useState({
@@ -19,8 +20,10 @@ export default function CreateWorkHistory() {
     const [files, setFiles] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
 
-    const serviceName = selectedNode?.serviceName;
-    const customerName = selectedNode?.customerName;
+    const serviceNameFromQuery = searchParams.get('serviceName');
+    const customerNameFromQuery = searchParams.get('customerName');
+    const serviceName = selectedNode?.serviceName ?? serviceNameFromQuery;
+    const customerName = selectedNode?.customerName ?? customerNameFromQuery;
     const [systems, setSystems] = useState([]);
     const [serviceId, setServiceId] = useState(null);
     const [isLegacyService, setIsLegacyService] = useState(false);
