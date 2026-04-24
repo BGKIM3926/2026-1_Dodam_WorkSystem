@@ -24,7 +24,7 @@ export default function CreateServiceManager() {
 
     useEffect(() => {
         if (!serviceName) {
-            setSnackbar({ open: true, message: 'Àß¸øµÈ Á¢±ÙÀÔ´Ï´Ù.', severity: 'error' });
+            setSnackbar({ open: true, message: 'ì˜ëª»ëœ ì ‘ê·¼ì…ë‹ˆë‹¤.', severity: 'error' });
             navigate('/dashboard/workhistory');
             return;
         }
@@ -51,7 +51,7 @@ export default function CreateServiceManager() {
                 const legacy = !!data.legacy;
                 setIsLegacyService(legacy);
                 if (legacy) {
-                    setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â Á¤º¸ µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+                    setSnackbar({ open: true, message: 'ì‘ì—… ì¢…ë£Œ ì„œë¹„ìŠ¤ëŠ” ì •ë³´ ë“±ë¡ì´ ë¶ˆê°€í•©ë‹ˆë‹¤.', severity: 'warning' });
                     navigate('/dashboard/workhistory');
                 }
             })
@@ -60,17 +60,17 @@ export default function CreateServiceManager() {
 
     const handleSubmit = async () => {
         if (isLegacyService) {
-            setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â Á¤º¸ µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+            setSnackbar({ open: true, message: 'ì‘ì—… ì¢…ë£Œ ì„œë¹„ìŠ¤ëŠ” ì •ë³´ ë“±ë¡ì´ ë¶ˆê°€í•©ë‹ˆë‹¤.', severity: 'warning' });
             return;
         }
 
-        if (!form.name) {
-            setSnackbar({ open: true, message: '´ã´çÀÚ¸íÀ» ÀÔ·ÂÇØ ÁÖ¼¼¿ä.', severity: 'warning' });
+        if (!form.name?.trim()) {
+            setSnackbar({ open: true, message: 'ë‹´ë‹¹ìëª…ì„ ì…ë ¥í•´ ì£¼ì„¸ìš”.', severity: 'warning' });
             return;
         }
 
         if (!serviceId) {
-            setSnackbar({ open: true, message: 'Service ID¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.', severity: 'error' });
+            setSnackbar({ open: true, message: 'Service IDë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.', severity: 'error' });
             return;
         }
 
@@ -88,14 +88,14 @@ export default function CreateServiceManager() {
 
             if (!res.ok) {
                 const text = await res.text();
-                setSnackbar({ open: true, message: `µî·Ï ½ÇÆĞ: ${text}`, severity: 'error' });
+                setSnackbar({ open: true, message: `ë“±ë¡ ì‹¤íŒ¨: ${text}`, severity: 'error' });
                 return;
             }
 
             navigate('/dashboard/workhistory');
         } catch (err) {
-            console.error('µî·Ï ½ÇÆĞ:', err);
-            setSnackbar({ open: true, message: 'µî·Ï Áß ¿À·ù ¹ß»ı', severity: 'error' });
+            console.error('ë“±ë¡ ì¤‘ ì˜¤ë¥˜:', err);
+            setSnackbar({ open: true, message: 'ë“±ë¡ ì¤‘ ì˜¤ë¥˜ ë°œìƒ', severity: 'error' });
         }
     };
 

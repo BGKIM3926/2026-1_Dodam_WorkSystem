@@ -250,7 +250,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                                     return (
                                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                                             {selected.map((id) => {
-                                                const sys = systems.find(s => s.systemID === id);
+                                                const sys = systems.find((s) => String(s.systemID ?? s.systemId) === String(id));
                                                 return <Chip key={id} label={sys?.systemNameMin || id} size="small" />;
                                             })}
                                         </Box>
@@ -258,7 +258,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                                 }}
                             >
                                 {systems.map((sys) => (
-                                    <MenuItem key={sys.systemId} value={sys.systemID}>
+                                    <MenuItem key={sys.systemID ?? sys.systemId} value={sys.systemID ?? sys.systemId}>
                                         {sys.systemNameMin}
                                     </MenuItem>
                                 ))}

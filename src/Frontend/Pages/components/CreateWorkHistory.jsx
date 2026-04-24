@@ -76,6 +76,11 @@ export default function CreateWorkHistory() {
             return;
         }
 
+        if (!serviceId) {
+            setSnackbar({ open: true, message: 'Service ID를 찾을 수 없습니다.', severity: 'error' });
+            return;
+        }
+
         if (form.workType !== REGULAR_CHECK && (!form.systemIds || form.systemIds.length === 0)) {
             setSnackbar({ open: true, message: '시스템을 선택해 주세요.', severity: 'warning' });
             return;
