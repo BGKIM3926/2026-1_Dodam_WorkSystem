@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -83,8 +82,6 @@ public class MailQueueService {
             Pattern.compile("(?s)\\[3\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Postfix\\)\\s*(.*?)(?=\\n\\s*\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)|\\z)");
     private static final Pattern NGINX_SUMMARY_PATTERN =
             Pattern.compile("(?s)\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)\\s*(.*)$");
-    private static final Pattern HTML_COMMAND_PATTERN =
-            Pattern.compile("(?im)^\\s*#GET\\s+HTML(?:\\s+((?:[01]\\d|2[0-3]):[0-5]\\d)\\s+TO\\s+((?:[01]\\d|2[0-3]):[0-5]\\d))?\\s*$");
 
     private final DSystemRepository dSystemRepository;
     private final SystemStatusOriginRepository systemStatusOriginRepository;
@@ -133,12 +130,8 @@ public class MailQueueService {
         saveLogs(origin.getOriginId(), parsed, receivedAt);
         saveSystemStatus(origin.getOriginId(), parsed, receivedAt);
 
-        HtmlCommandOption htmlCommand = parseHtmlCommandOption(request.getBody(), receivedAt);
         try {
-            if (!htmlCommand.enabled()) {
-                return new MailResponseDto(requestId, "HTML_SKIPPED");
-            }
-            writeQueueHtmlFile(requestId, request.getSystemId().trim(), receivedAt, htmlCommand);
+            writeQueueHtmlFile(requestId, request.getSystemId().trim(), receivedAt);
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
             throw new IllegalStateException("메일 큐 파일 저장에 실패했습니다.");
@@ -169,8 +162,7 @@ public class MailQueueService {
     private Path writeQueueHtmlFile(
             String requestId,
             String systemId,
-            LocalDateTime generatedAt,
-            HtmlCommandOption htmlCommand
+            LocalDateTime generatedAt
     ) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
@@ -180,11 +172,7 @@ public class MailQueueService {
         String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".html";
         Path filePath = resolvedQueueDir.resolve(fileName);
 
-        List<SystemStatusRepository.QueueStatusRow> rows = htmlCommand.hasTimeRange()
-                ? systemStatusRepository.findLatestQueueStatusRowsByTimeRange(
-                        htmlCommand.startTime(),
-                        htmlCommand.endTime())
-                : systemStatusRepository.findLatestQueueStatusRows();
+        List<SystemStatusRepository.QueueStatusRow> rows = systemStatusRepository.findLatestQueueStatusRows();
         String html = buildHtmlPayload(rows, generatedAt);
         Files.writeString(filePath, html, StandardCharsets.UTF_8);
         return filePath;
@@ -307,42 +295,6 @@ public class MailQueueService {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&#39;");
-    }
-
-    private HtmlCommandOption parseHtmlCommandOption(String bodyRaw, LocalDateTime receivedAt) {
-        if (bodyRaw == null || bodyRaw.isBlank()) {
-            return HtmlCommandOption.disabled();
-        }
-        Matcher matcher = HTML_COMMAND_PATTERN.matcher(bodyRaw);
-        if (!matcher.find()) {
-            return HtmlCommandOption.disabled();
-        }
-        String start = matcher.group(1);
-        String end = matcher.group(2);
-        if (start == null && end == null) {
-            return HtmlCommandOption.enabledWithoutRange();
-        }
-        if (start == null || end == null) {
-            throw new IllegalArgumentException("#GET HTML 시간 범위 형식이 올바르지 않습니다. 예: #GET HTML 08:30 TO 09:00");
-        }
-
-        LocalTime startTime;
-        LocalTime endTime;
-        try {
-            startTime = LocalTime.parse(start);
-            endTime = LocalTime.parse(end);
-        } catch (RuntimeException e) {
-            throw new IllegalArgumentException("#GET HTML 시간은 HH:mm 형식(00:00~23:59)이어야 합니다.");
-        }
-        if (endTime.isBefore(startTime)) {
-            throw new IllegalArgumentException("#GET HTML 시간 범위는 시작 시간이 종료 시간보다 빠르거나 같아야 합니다.");
-        }
-
-        LocalDateTime dayBase = receivedAt.toLocalDate().atStartOfDay();
-        return HtmlCommandOption.enabledWithRange(
-                dayBase.withHour(startTime.getHour()).withMinute(startTime.getMinute()),
-                dayBase.withHour(endTime.getHour()).withMinute(endTime.getMinute()).withSecond(59)
-        );
     }
 
     private String sanitizeSystemId(String systemId) {
@@ -761,25 +713,4 @@ public class MailQueueService {
     ) {
     }
 
-    private record HtmlCommandOption(
-            boolean enabled,
-            LocalDateTime startTime,
-            LocalDateTime endTime
-    ) {
-        private static HtmlCommandOption disabled() {
-            return new HtmlCommandOption(false, null, null);
-        }
-
-        private static HtmlCommandOption enabledWithoutRange() {
-            return new HtmlCommandOption(true, null, null);
-        }
-
-        private static HtmlCommandOption enabledWithRange(LocalDateTime startTime, LocalDateTime endTime) {
-            return new HtmlCommandOption(true, startTime, endTime);
-        }
-
-        private boolean hasTimeRange() {
-            return startTime != null && endTime != null;
-        }
-    }
 }
