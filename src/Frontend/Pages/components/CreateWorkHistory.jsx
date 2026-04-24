@@ -70,22 +70,25 @@ export default function CreateWorkHistory() {
     }, [serviceId, navigate]);
 
     const handleSubmit = async () => {
+        const normalizedWorkType = (form.workType || '').trim();
+        const isRegularCheck = normalizedWorkType === REGULAR_CHECK;
+
         if (isLegacyService) {
             setSnackbar({ open: true, message: '작업 종료 서비스는 이력 등록이 불가합니다.', severity: 'warning' });
             return;
         }
 
-        if (!form.workType) {
+        if (!normalizedWorkType) {
             setSnackbar({ open: true, message: '작업 유형을 선택해 주세요.', severity: 'warning' });
             return;
         }
 
-        if (form.workType !== REGULAR_CHECK && !serviceId) {
+        if (!isRegularCheck && !serviceId) {
             setSnackbar({ open: true, message: 'Service ID를 찾을 수 없습니다.', severity: 'error' });
             return;
         }
 
-        if (form.workType !== REGULAR_CHECK && (!form.systemIds || form.systemIds.length === 0)) {
+        if (!isRegularCheck && (!form.systemIds || form.systemIds.length === 0)) {
             setSnackbar({ open: true, message: '시스템을 선택해 주세요.', severity: 'warning' });
             return;
         }
@@ -97,13 +100,14 @@ export default function CreateWorkHistory() {
             return;
         }
 
-        const systemIds = form.workType === REGULAR_CHECK ? [null] : form.systemIds;
+        const systemIds = isRegularCheck ? [null] : form.systemIds;
         const uploadFiles = files.filter((file) => file instanceof File && !Number.isNaN(file.size));
 
         try {
             for (const systemIdItem of systemIds) {
                 const body = {
                     ...form,
+                    workType: normalizedWorkType,
                     systemId: systemIdItem ? Number(systemIdItem) : null,
                     serviceId: serviceId ? Number(serviceId) : null,
                     region: customerName,
