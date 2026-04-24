@@ -26,6 +26,10 @@ export default function CreateWorkHistory() {
     const [isLegacyService, setIsLegacyService] = useState(false);
 
     useEffect(() => {
+        if (selectedNode?.serviceId) {
+            setServiceId(selectedNode.serviceId);
+        }
+
         if (!serviceName) return;
 
         fetch(`/api/dsystem/filter?serviceName=${serviceName}&customerName=${customerName}`)
@@ -37,7 +41,7 @@ export default function CreateWorkHistory() {
                 }
             })
             .catch((err) => console.error(err));
-    }, [serviceName, customerName]);
+    }, [serviceName, customerName, selectedNode?.serviceId]);
 
     useEffect(() => {
         if (!serviceName) {
@@ -76,7 +80,7 @@ export default function CreateWorkHistory() {
             return;
         }
 
-        if (!serviceId) {
+        if (form.workType !== REGULAR_CHECK && !serviceId) {
             setSnackbar({ open: true, message: 'Service ID를 찾을 수 없습니다.', severity: 'error' });
             return;
         }
