@@ -5,7 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example.backend.dto.WorkHistoryResponseDto;
 import com.example.backend.entity.Attachment;
@@ -37,6 +41,7 @@ import com.example.backend.service.WorkHistoryService;
 @RestController
 @RequestMapping("/api/history")
 public class WorkHistoryController {
+    private static final Logger log = LoggerFactory.getLogger(WorkHistoryController.class);
 
     private final WorkHistoryService service;
     private final AttachmentRepository attachmentRepository;
@@ -68,16 +73,24 @@ public class WorkHistoryController {
     @PostMapping("/with-files")
     public MaintenanceHistory createWithFiles(
         @RequestPart("data") MaintenanceHistory history,
-        @RequestPart(value = "files", required = false) List<MultipartFile> files
+        @RequestPart(value = "files", required = false) List<MultipartFile> files,
+        @RequestPart(value = "files[]", required = false) List<MultipartFile> filesArray,
+        @RequestParam(value = "files", required = false) List<MultipartFile> filesFromParam,
+        @RequestParam(value = "files[]", required = false) List<MultipartFile> filesArrayFromParam,
+        @RequestParam(value = "expectedFileCount", required = false) Integer expectedFileCount
     ) throws IOException {
+        List<MultipartFile> uploadedFiles = mergeFiles(files, filesArray, filesFromParam, filesArrayFromParam);
+        int expected = expectedFileCount == null ? 0 : expectedFileCount;
+        int received = uploadedFiles.size();
 
-        MaintenanceHistory saved = service.create(history);
+        log.info("createWithFiles called: expectedFileCount={}, receivedFileCount={}, serviceId={}, workType={}",
+                expected, received, history.getServiceId(), history.getWorkType());
 
-        if (files != null && !files.isEmpty()) {
-            service.saveAttachments(saved.getHistoryId(), files);
+        if (expected > 0 && received == 0) {
+            throw new IllegalStateException("첨부파일이 서버로 전송되지 않았습니다. 새로고침 후 다시 시도해 주세요.");
         }
 
-        return saved;
+        return service.createWithAttachments(history, uploadedFiles);
     }
 
     @PutMapping("/{id}")
@@ -178,5 +191,22 @@ public class WorkHistoryController {
     @org.springframework.web.bind.annotation.ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
+
+    @SafeVarargs
+    private static List<MultipartFile> mergeFiles(List<MultipartFile>... fileLists) {
+        List<MultipartFile> merged = new ArrayList<>();
+        for (List<MultipartFile> list : fileLists) {
+            if (list == null || list.isEmpty()) {
+                continue;
+            }
+            for (MultipartFile file : list) {
+                if (file == null || file.isEmpty()) {
+                    continue;
+                }
+                merged.add(file);
+            }
+        }
+        return merged.stream().filter(Objects::nonNull).toList();
     }
 }

@@ -94,6 +94,7 @@ export default function CreateWorkHistory() {
         }
 
         const systemIds = form.workType === REGULAR_CHECK ? [null] : form.systemIds;
+        const uploadFiles = files.filter((file) => file instanceof File && !Number.isNaN(file.size));
 
         try {
             for (const systemIdItem of systemIds) {
@@ -109,10 +110,11 @@ export default function CreateWorkHistory() {
                 delete body.systemIds;
 
                 const formData = new FormData();
-                formData.append('data', new Blob([JSON.stringify(body)], { type: 'application/json' }));
-                files.forEach((file) => {
-                    formData.append('files', file);
+                formData.append('data', new Blob([JSON.stringify(body)], { type: 'application/json' }), 'data.json');
+                uploadFiles.forEach((file) => {
+                    formData.append('files', file, file.name);
                 });
+                formData.append('expectedFileCount', String(uploadFiles.length));
 
                 const res = await fetch('/api/history/with-files', {
                     method: 'POST',

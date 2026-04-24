@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -104,6 +105,15 @@ public class WorkHistoryService {
             throw new IllegalStateException("해당 서비스는 작업 종료 상태로 등록할 수 없습니다.");
         }
         return repository.save(history);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public MaintenanceHistory createWithAttachments(MaintenanceHistory history, List<MultipartFile> files) throws IOException {
+        MaintenanceHistory saved = create(history);
+        if (files != null && !files.isEmpty()) {
+            saveAttachments(saved.getHistoryId(), files);
+        }
+        return saved;
     }
 
     public MaintenanceHistory getById(Long id) {
