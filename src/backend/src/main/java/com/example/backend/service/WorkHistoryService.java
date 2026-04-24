@@ -25,6 +25,9 @@ import com.example.backend.repository.WorkHistoryRepository;
 
 @Service
 public class WorkHistoryService {
+    private static final String WORK_TYPE_FAULT = "장애조치";
+    private static final String WORK_TYPE_SUPPORT = "기술지원";
+    private static final String WORK_TYPE_CONSTRUCTION = "구축";
 
     private final WorkHistoryRepository repository;
     private final AttachmentRepository attachmentRepository;
@@ -101,6 +104,8 @@ public class WorkHistoryService {
     }
 
     public MaintenanceHistory create(MaintenanceHistory history) {
+        validateCreateRequest(history);
+
         if (history.getServiceId() != null && legacyServiceRepository.existsById(history.getServiceId())) {
             throw new IllegalStateException("해당 서비스는 작업 종료 상태로 등록할 수 없습니다.");
         }
@@ -178,6 +183,31 @@ public class WorkHistoryService {
         }
 
         Files.deleteIfExists(Path.of(attachment.getFilePath()));
+    }
+
+    private void validateCreateRequest(MaintenanceHistory history) {
+        String workType = history.getWorkType() == null ? "" : history.getWorkType().trim();
+        boolean isFaultOrSupport = WORK_TYPE_FAULT.equals(workType) || WORK_TYPE_SUPPORT.equals(workType);
+        boolean isConstruction = WORK_TYPE_CONSTRUCTION.equals(workType);
+
+        if (isFaultOrSupport || isConstruction) {
+            if (isBlank(history.getIssue())) {
+                throw new IllegalStateException("내용을 입력해 주세요.");
+            }
+            if (isBlank(history.getIssueDetail())) {
+                throw new IllegalStateException("내용 상세를 입력해 주세요.");
+            }
+        }
+
+        if (isConstruction) {
+            if (history.getConstructionStartDate() == null || history.getConstructionEndDate() == null) {
+                throw new IllegalStateException("구축기간(시작일/종료일)을 모두 선택해 주세요.");
+            }
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
     
 }

@@ -6,6 +6,9 @@ import WorkHistoryForm from './WorkHistoryForm';
 
 export default function CreateWorkHistory() {
     const REGULAR_CHECK = '정기점검';
+    const FAULT_RESPONSE = '장애조치';
+    const TECH_SUPPORT = '기술지원';
+    const CONSTRUCTION = '구축';
 
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -75,6 +78,10 @@ export default function CreateWorkHistory() {
     const handleSubmit = async () => {
         const normalizedWorkType = (form.workType || '').trim();
         const isRegularCheck = normalizedWorkType === REGULAR_CHECK;
+        const isFaultOrSupport = normalizedWorkType === FAULT_RESPONSE || normalizedWorkType === TECH_SUPPORT;
+        const isConstruction = normalizedWorkType === CONSTRUCTION;
+        const normalizedIssue = (form.issue || '').trim();
+        const normalizedIssueDetail = (form.issueDetail || '').trim();
 
         if (isLegacyService) {
             setSnackbar({ open: true, message: '작업 종료 서비스는 이력 등록이 불가합니다.', severity: 'warning' });
@@ -96,6 +103,23 @@ export default function CreateWorkHistory() {
             return;
         }
 
+        if (isFaultOrSupport || isConstruction) {
+            if (!normalizedIssue) {
+                setSnackbar({ open: true, message: '내용을 입력해 주세요.', severity: 'warning' });
+                return;
+            }
+
+            if (!normalizedIssueDetail) {
+                setSnackbar({ open: true, message: '내용 상세를 입력해 주세요.', severity: 'warning' });
+                return;
+            }
+        }
+
+        if (isConstruction && (!form.constructionStartDate || !form.constructionEndDate)) {
+            setSnackbar({ open: true, message: '구축기간(시작일/종료일)을 모두 선택해 주세요.', severity: 'warning' });
+            return;
+        }
+
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
         if (!user?.id) {
@@ -111,6 +135,8 @@ export default function CreateWorkHistory() {
                 const body = {
                     ...form,
                     workType: normalizedWorkType,
+                    issue: normalizedIssue,
+                    issueDetail: normalizedIssueDetail || null,
                     systemId: systemIdItem ? Number(systemIdItem) : null,
                     serviceId: serviceId ? Number(serviceId) : null,
                     region: customerName,
