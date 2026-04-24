@@ -5,6 +5,8 @@ import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import WorkHistoryForm from './WorkHistoryForm';
 
 export default function CreateWorkHistory() {
+    const REGULAR_CHECK = 'ì •ê¸°ì ê²€';
+
     const navigate = useNavigate();
     const { selectedNode } = useSelectedNode();
 
@@ -39,7 +41,7 @@ export default function CreateWorkHistory() {
 
     useEffect(() => {
         if (!serviceName) {
-            setSnackbar({ open: true, message: 'Àß¸øµÈ Á¢±ÙÀÔ´Ï´Ù.', severity: 'error' });
+            setSnackbar({ open: true, message: 'ì˜ëª»ëœ ì ‘ê·¼ì…ë‹ˆë‹¤.', severity: 'error' });
             navigate('/dashboard/workhistory');
         }
     }, [serviceName, navigate]);
@@ -56,7 +58,7 @@ export default function CreateWorkHistory() {
                 const legacy = !!data.legacy;
                 setIsLegacyService(legacy);
                 if (legacy) {
-                    setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â ÀÌ·Â µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+                    setSnackbar({ open: true, message: 'ì‘ì—… ì¢…ë£Œ ì„œë¹„ìŠ¤ëŠ” ì´ë ¥ ë“±ë¡ì´ ë¶ˆê°€í•©ë‹ˆë‹¤.', severity: 'warning' });
                     navigate('/dashboard/workhistory');
                 }
             })
@@ -65,19 +67,28 @@ export default function CreateWorkHistory() {
 
     const handleSubmit = async () => {
         if (isLegacyService) {
-            setSnackbar({ open: true, message: 'ÀÛ¾÷ Á¾·á ¼­ºñ½º´Â ÀÌ·Â µî·ÏÀÌ ºÒ°¡ÇÕ´Ï´Ù.', severity: 'warning' });
+            setSnackbar({ open: true, message: 'ì‘ì—… ì¢…ë£Œ ì„œë¹„ìŠ¤ëŠ” ì´ë ¥ ë“±ë¡ì´ ë¶ˆê°€í•©ë‹ˆë‹¤.', severity: 'warning' });
             return;
         }
 
-        if (form.workType !== 'Á¤±âÁ¡°Ë' && (!form.systemIds || form.systemIds.length === 0)) {
-            setSnackbar({ open: true, message: '½Ã½ºÅÛÀ» ¼±ÅÃÇØ ÁÖ¼¼¿ä.', severity: 'warning' });
+        if (!form.workType) {
+            setSnackbar({ open: true, message: 'ì‘ì—… ìœ í˜•ì„ ì„ íƒí•´ ì£¼ì„¸ìš”.', severity: 'warning' });
+            return;
+        }
+
+        if (form.workType !== REGULAR_CHECK && (!form.systemIds || form.systemIds.length === 0)) {
+            setSnackbar({ open: true, message: 'ì‹œìŠ¤í…œì„ ì„ íƒí•´ ì£¼ì„¸ìš”.', severity: 'warning' });
             return;
         }
 
         const raw = localStorage.getItem('loginUser');
         const user = raw ? JSON.parse(raw) : null;
+        if (!user?.id) {
+            setSnackbar({ open: true, message: 'ë¡œê·¸ì¸ ì •ë³´ê°€ ì—†ì–´ ë“±ë¡í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤. ë‹¤ì‹œ ë¡œê·¸ì¸í•´ ì£¼ì„¸ìš”.', severity: 'error' });
+            return;
+        }
 
-        const systemIds = form.workType === 'Á¤±âÁ¡°Ë' ? [null] : form.systemIds;
+        const systemIds = form.workType === REGULAR_CHECK ? [null] : form.systemIds;
 
         try {
             for (const systemIdItem of systemIds) {
@@ -105,15 +116,15 @@ export default function CreateWorkHistory() {
 
                 if (!res.ok) {
                     const text = await res.text();
-                    setSnackbar({ open: true, message: `µî·Ï ½ÇÆĞ: ${text}`, severity: 'error' });
+                    setSnackbar({ open: true, message: `ë“±ë¡ ì‹¤íŒ¨: ${text}`, severity: 'error' });
                     return;
                 }
             }
 
             navigate('/dashboard/workhistory');
         } catch (err) {
-            console.error('¾÷·Îµå ½ÇÆĞ:', err);
-            setSnackbar({ open: true, message: 'ÆÄÀÏ ¾÷·Îµå Áß ¿À·ù ¹ß»ı', severity: 'error' });
+            console.error('ë“±ë¡ ì¤‘ ì˜¤ë¥˜:', err);
+            setSnackbar({ open: true, message: 'íŒŒì¼ ì—…ë¡œë“œ ì¤‘ ì˜¤ë¥˜ ë°œìƒ', severity: 'error' });
         }
     };
 
