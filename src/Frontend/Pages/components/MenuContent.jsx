@@ -139,11 +139,10 @@ export default function MenuContent({ treeData, mobileOnly = false }) {
         </ListItemButton>
       )}
 
-      {!mobileOnly && (
-        <Box
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
-        >
+      <Box
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
           <ListItemButton
             selected={location.pathname.includes('workhistory')}
             onClick={() => {
@@ -192,7 +191,6 @@ export default function MenuContent({ treeData, mobileOnly = false }) {
             </Box>
           </Collapse>
         </Box>
-      )}
     </List>
   );
 }
