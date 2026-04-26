@@ -734,20 +734,6 @@ export default function CustomizedDataGrid() {
         </div>
       ),
     },
-    {
-      field: 'actions',
-      headerName: '수정',
-      width: 50,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-          <IconButton size="small" sx={{ border: 'none' }} onClick={(e) => handleEditClick(e, params.row)}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      ),
-    },
   ];
   return (
     <>

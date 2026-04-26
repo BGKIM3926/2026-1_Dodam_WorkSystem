@@ -106,6 +106,7 @@ function SideMenuMobile({ open, toggleDrawer }) {
           <MenuContent
             treeData={treeData}
             setSelectedNode={setSelectedNode}
+            mobileOnly
           />
           <Divider />
         </Stack>

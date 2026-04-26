@@ -18,7 +18,7 @@ import DynamicTreeMenu from './DynamicTreeMenu';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 
-export default function MenuContent({ treeData }) {
+export default function MenuContent({ treeData, mobileOnly = false }) {
   const { selectedNode, setSelectedNode } = useSelectedNode();
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,32 +54,34 @@ export default function MenuContent({ treeData }) {
         <ListItemText primary="홈" />
       </ListItemButton>
 
-      <ListItemButton
-        selected={location.pathname.includes('users')}
-        onClick={() => navigate('/dashboard/users')}
-        sx={{
-          borderRadius: 2,
-          px: 2,
-          py: 1.2,
-          gap: 1.5,
-          '& .MuiListItemIcon-root': {
-            minWidth: 0,
-            color: 'text.secondary',
-          },
-          '&.Mui-selected': {
-            backgroundColor: 'primary.main',
-            color: 'white',
+      {!mobileOnly && (
+        <ListItemButton
+          selected={location.pathname.includes('users')}
+          onClick={() => navigate('/dashboard/users')}
+          sx={{
+            borderRadius: 2,
+            px: 2,
+            py: 1.2,
+            gap: 1.5,
             '& .MuiListItemIcon-root': {
-              color: 'white',
+              minWidth: 0,
+              color: 'text.secondary',
             },
-          },
-        }}
-      >
-        <ListItemIcon>
-          <PeopleRoundedIcon />
-        </ListItemIcon>
-        <ListItemText primary="인사 관리" />
-      </ListItemButton>
+            '&.Mui-selected': {
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '& .MuiListItemIcon-root': {
+                color: 'white',
+              },
+            },
+          }}
+        >
+          <ListItemIcon>
+            <PeopleRoundedIcon />
+          </ListItemIcon>
+          <ListItemText primary="인사 관리" />
+        </ListItemButton>
+      )}
 
       <ListItemButton
         selected={location.pathname.includes('task')}
@@ -108,42 +110,10 @@ export default function MenuContent({ treeData }) {
         <ListItemText primary="고객 정보" />
       </ListItemButton>
 
-      <ListItemButton
-        selected={location.pathname.includes('settings')}
-        onClick={() => navigate('/dashboard/settings')}
-        sx={{
-          borderRadius: 2,
-          px: 2,
-          py: 1.2,
-          gap: 1.5,
-          '& .MuiListItemIcon-root': {
-            minWidth: 0,
-            color: 'text.secondary',
-          },
-          '&.Mui-selected': {
-            backgroundColor: 'primary.main',
-            color: 'white',
-            '& .MuiListItemIcon-root': {
-              color: 'white',
-            },
-          },
-        }}
-      >
-        <ListItemIcon>
-          <SettingsRoundedIcon />
-        </ListItemIcon>
-        <ListItemText primary="설정" />
-      </ListItemButton>
-
-      <Box
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-      >
+      {!mobileOnly && (
         <ListItemButton
-          selected={location.pathname.includes('workhistory')}
-          onClick={() => {
-            setOpen((prev) => !prev);
-          }}
+          selected={location.pathname.includes('settings')}
+          onClick={() => navigate('/dashboard/settings')}
           sx={{
             borderRadius: 2,
             px: 2,
@@ -163,30 +133,66 @@ export default function MenuContent({ treeData }) {
           }}
         >
           <ListItemIcon>
-            <WorkRoundedIcon />
+            <SettingsRoundedIcon />
           </ListItemIcon>
-          <ListItemText primary="이력 관리" />
+          <ListItemText primary="설정" />
         </ListItemButton>
+      )}
 
-        <Collapse in={open} timeout="auto" unmountOnExit>
-          <Box sx={{ pl: 3 }}>
-            <DynamicTreeMenu
-              data={treeData}
-              onSelect={(node) => {
-                setSelectedNode({
-                  serviceName: node.serviceName,
-                  customerName: node.customerName,
-                  serviceId: node.serviceId,
-                  isLegacy: !!node.isLegacy,
-                });
+      {!mobileOnly && (
+        <Box
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <ListItemButton
+            selected={location.pathname.includes('workhistory')}
+            onClick={() => {
+              setOpen((prev) => !prev);
+            }}
+            sx={{
+              borderRadius: 2,
+              px: 2,
+              py: 1.2,
+              gap: 1.5,
+              '& .MuiListItemIcon-root': {
+                minWidth: 0,
+                color: 'text.secondary',
+              },
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '& .MuiListItemIcon-root': {
+                  color: 'white',
+                },
+              },
+            }}
+          >
+            <ListItemIcon>
+              <WorkRoundedIcon />
+            </ListItemIcon>
+            <ListItemText primary="이력 관리" />
+          </ListItemButton>
 
-                navigate(`/dashboard/workhistory?customerName=${node.customerName}&serviceName=${node.serviceName}`);
-              }}
-              selectedNode={selectedNode}
-            />
-          </Box>
-        </Collapse>
-      </Box>
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <Box sx={{ pl: 3 }}>
+              <DynamicTreeMenu
+                data={treeData}
+                onSelect={(node) => {
+                  setSelectedNode({
+                    serviceName: node.serviceName,
+                    customerName: node.customerName,
+                    serviceId: node.serviceId,
+                    isLegacy: !!node.isLegacy,
+                  });
+
+                  navigate(`/dashboard/workhistory?customerName=${node.customerName}&serviceName=${node.serviceName}`);
+                }}
+                selectedNode={selectedNode}
+              />
+            </Box>
+          </Collapse>
+        </Box>
+      )}
     </List>
   );
 }
