@@ -74,6 +74,17 @@ const createEmptyAccount = () => ({
   accountPw: '',
 });
 
+const hasCustomerGridContent = (row) => (
+  [
+    row.customerName,
+    row.serviceNameMin,
+    row.systemNameMin,
+    row.hardwareName,
+    row.osName,
+    row.osIp,
+  ].some((value) => String(value ?? '').trim())
+);
+
 export default function CustomizedDataGrid() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +152,9 @@ export default function CustomizedDataGrid() {
     try {
       const res = await fetch('/api/dsystem');
       const data = await res.json();
-      const mapped = data.map((item, index) => ({ id: index, ...item }));
+      const mapped = data
+        .filter(hasCustomerGridContent)
+        .map((item, index) => ({ id: item.systemID ?? index, ...item }));
       setRows(mapped);
     } catch (err) {
       console.error(err);
@@ -738,7 +751,7 @@ export default function CustomizedDataGrid() {
   ];
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+      <Box sx={{ display: { xs: 'none', sm: 'flex' }, justifyContent: 'flex-end', gap: 1, mb: 1, flexWrap: 'wrap' }}>
         <Button variant="contained" color="success" startIcon={<AddIcon />} onClick={openAddDialog} sx={{ width: { xs: '100%', sm: 'auto' } }}>
           행 추가
         </Button>
@@ -759,10 +772,26 @@ export default function CustomizedDataGrid() {
         getRowClassName={(params) => (params.indexRelativeToCurrentPage % 2 === 0 ? 'even' : 'odd')}
         initialState={{ pagination: { paginationModel: { pageSize: isMobile ? 8 : 10 } } }}
         pageSizeOptions={[10, 20, 50]}
+        autoHeight={isMobile}
+        disableVirtualization={isMobile}
         disableColumnResize
         disableColumnFilter
         rowHeight={isMobile ? 104 : 52}
         sx={{
+          ...(isMobile && {
+            borderLeft: 0,
+            borderRight: 0,
+            '& .MuiDataGrid-main': {
+              overflow: 'visible',
+            },
+            '& .MuiDataGrid-virtualScroller': {
+              overflow: 'visible !important',
+              touchAction: 'pan-y',
+            },
+            '& .MuiDataGrid-row, & .MuiDataGrid-cell': {
+              touchAction: 'pan-y',
+            },
+          }),
           '& .MuiDataGrid-columnHeaders': {
             minHeight: isMobile ? 56 : undefined,
             maxHeight: isMobile ? 56 : undefined,

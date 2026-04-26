@@ -1,7 +1,6 @@
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
-import Copyright from '../internals/components/Copyright';
 
 import CustomizedDataGrid from './CustomizedDataGrid';
 
@@ -23,7 +22,6 @@ export default function MainGrid() {
           <CustomizedDataGrid />
         </Grid>
       </Grid>
-      <Copyright sx={{ my: 4 }} />
     </Container>
   );
 }
