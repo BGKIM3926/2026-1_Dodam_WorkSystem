@@ -95,11 +95,11 @@ public class DSystemService {
     }
 
     public List<DSystemDto> getAll() {
-        return repository.findAllActiveVersion().stream().map(this::toDto).toList();
+        return repository.findAll().stream().map(this::toDto).toList();
     }
 
     public List<DSystemDto> getVersionOptions() {
-        return repository.findAll().stream().map(this::toDto).toList();
+        return getAll();
     }
 
     @Transactional
@@ -162,7 +162,7 @@ public class DSystemService {
 
     public List<DSystemDto> getByService(String serviceName, String customerName) {
         return repository
-                .findActiveByServiceNameMinAndCustomerName(serviceName, customerName)
+                .findByServiceNameMinAndCustomerName(serviceName, customerName)
                 .stream()
                 .map(this::toDto)
                 .toList();

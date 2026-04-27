@@ -98,6 +98,7 @@ export default function CustomizedDataGrid() {
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const [customerFilter, setCustomerFilter] = useState('');
+  const [versionFilter, setVersionFilter] = useState('');
 
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -144,8 +145,9 @@ export default function CustomizedDataGrid() {
   const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))];
 
   const filteredRows = rows.filter((row) => {
-    if (!customerFilter) return true;
-    return row.customerName === customerFilter;
+    const matchCustomer = !customerFilter || row.customerName === customerFilter;
+    const matchVersion = !versionFilter || (row.version || '신') === versionFilter;
+    return matchCustomer && matchVersion;
   });
 
   const fetchSystems = async () => {
@@ -155,7 +157,7 @@ export default function CustomizedDataGrid() {
       const data = await res.json();
       const mapped = data
         .filter(hasCustomerGridContent)
-        .map((item, index) => ({ id: item.systemID ?? index, ...item }));
+        .map((item, index) => ({ id: item.systemID ?? index, ...item, version: item.version || '신' }));
       setRows(mapped);
     } catch (err) {
       console.error(err);
@@ -682,6 +684,31 @@ export default function CustomizedDataGrid() {
     },
     { field: 'serviceNameMin', headerName: '서비스명', flex: 1, sortable: false, filterable: false },
     { field: 'systemNameMin', headerName: '시스템명', flex: 1, sortable: false, filterable: false },
+    {
+      field: 'version',
+      headerName: '버전',
+      width: 120,
+      sortable: false,
+      filterable: false,
+      renderHeader: () => (
+        <FormControl size="small" fullWidth>
+          <Select
+            value={versionFilter}
+            displayEmpty
+            onChange={(e) => setVersionFilter(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ fontSize: 14 }}
+          >
+            <MenuItem value="">
+              <em>전체</em>
+            </MenuItem>
+            <MenuItem value="신">신</MenuItem>
+            <MenuItem value="구">구</MenuItem>
+          </Select>
+        </FormControl>
+      ),
+      renderCell: (params) => params.row.version || '신',
+    },
     { field: 'hardwareName', headerName: '하드웨어', flex: 1, sortable: false, filterable: false },
     { field: 'osName', headerName: 'OS', flex: 1, sortable: false, filterable: false },
     { field: 'osIp', headerName: 'IP', flex: 1, sortable: false, filterable: false },
@@ -733,7 +760,7 @@ export default function CustomizedDataGrid() {
           <div style={{ lineHeight: 1.4 }}>
             <div style={{ fontWeight: 600 }}>{params.row.customerName}</div>
             <div style={{ fontSize: 12, color: '#666' }}>
-              {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp}
+              {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp} / {params.row.version || '신'}
             </div>
           </div>
         </div>
