@@ -13,6 +13,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -27,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.dto.MailRequestDto;
 import com.example.backend.dto.MailResponseDto;
+import com.example.backend.entity.Info;
+import com.example.backend.entity.Issue;
 import com.example.backend.entity.ResourceStatus;
 import com.example.backend.entity.ServiceHealthStatus;
 import com.example.backend.entity.SystemCpuUsage;
@@ -37,6 +40,8 @@ import com.example.backend.entity.SystemServiceLog;
 import com.example.backend.entity.SystemStatus;
 import com.example.backend.entity.SystemStatusOrigin;
 import com.example.backend.repository.DSystemRepository;
+import com.example.backend.repository.InfoRepository;
+import com.example.backend.repository.IssueRepository;
 import com.example.backend.repository.SystemCpuUsageRepository;
 import com.example.backend.repository.SystemDiskUsageRepository;
 import com.example.backend.repository.SystemMemUsageRepository;
@@ -44,6 +49,8 @@ import com.example.backend.repository.SystemSecurityLogRepository;
 import com.example.backend.repository.SystemServiceLogRepository;
 import com.example.backend.repository.SystemStatusRepository;
 import com.example.backend.repository.SystemStatusOriginRepository;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class MailQueueService {
@@ -84,6 +91,8 @@ public class MailQueueService {
             Pattern.compile("(?s)\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)\\s*(.*)$");
 
     private final DSystemRepository dSystemRepository;
+    private final InfoRepository infoRepository;
+    private final IssueRepository issueRepository;
     private final SystemStatusOriginRepository systemStatusOriginRepository;
     private final SystemCpuUsageRepository systemCpuUsageRepository;
     private final SystemMemUsageRepository systemMemUsageRepository;
@@ -91,21 +100,27 @@ public class MailQueueService {
     private final SystemServiceLogRepository systemServiceLogRepository;
     private final SystemSecurityLogRepository systemSecurityLogRepository;
     private final SystemStatusRepository systemStatusRepository;
+    private final ObjectMapper objectMapper;
 
     @Value("${mail.queue-dir:mail-queue}")
     private String queueDir;
 
     public MailQueueService(
             DSystemRepository dSystemRepository,
+            InfoRepository infoRepository,
+            IssueRepository issueRepository,
             SystemStatusOriginRepository systemStatusOriginRepository,
             SystemCpuUsageRepository systemCpuUsageRepository,
             SystemMemUsageRepository systemMemUsageRepository,
             SystemDiskUsageRepository systemDiskUsageRepository,
             SystemServiceLogRepository systemServiceLogRepository,
             SystemSecurityLogRepository systemSecurityLogRepository,
-            SystemStatusRepository systemStatusRepository
+            SystemStatusRepository systemStatusRepository,
+            ObjectMapper objectMapper
     ) {
         this.dSystemRepository = dSystemRepository;
+        this.infoRepository = infoRepository;
+        this.issueRepository = issueRepository;
         this.systemStatusOriginRepository = systemStatusOriginRepository;
         this.systemCpuUsageRepository = systemCpuUsageRepository;
         this.systemMemUsageRepository = systemMemUsageRepository;
@@ -113,6 +128,7 @@ public class MailQueueService {
         this.systemServiceLogRepository = systemServiceLogRepository;
         this.systemSecurityLogRepository = systemSecurityLogRepository;
         this.systemStatusRepository = systemStatusRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -123,6 +139,7 @@ public class MailQueueService {
         LocalDateTime receivedAt = LocalDateTime.now();
         Integer dsystemId = parseDSystemId(request.getSystemId().trim());
         ensureDSystemExists(dsystemId.longValue());
+        saveInfoAndIssues(request, receivedAt);
 
         ParsedInspectionData parsed = parseBodyOrNull(request.getBody(), requestId);
         SystemStatusOrigin origin = saveOrigin(request.getBody(), dsystemId, receivedAt);
@@ -135,6 +152,108 @@ public class MailQueueService {
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
             throw new IllegalStateException("메일 큐 파일 저장에 실패했습니다.");
+        }
+    }
+
+    private void saveInfoAndIssues(MailRequestDto request, LocalDateTime receivedAt) {
+        JsonNode reportJson = readReportJsonOrNull(request.getBody());
+        String bodyRawJson = reportJson == null
+                ? createFallbackBodyJson(request, receivedAt)
+                : writeJson(reportJson);
+
+        Info info = new Info();
+        info.setBodyRawJson(bodyRawJson);
+        info.setTime(receivedAt);
+        infoRepository.save(info);
+
+        if (reportJson != null) {
+            saveIssues(reportJson);
+        }
+    }
+
+    private void saveIssues(JsonNode reportJson) {
+        JsonNode issues = getIssueArray(reportJson);
+        if (issues == null || !issues.isArray()) {
+            return;
+        }
+
+        List<Issue> issueRows = new ArrayList<>();
+        for (JsonNode item : issues) {
+            Issue issue = new Issue();
+            issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
+            issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
+            issue.setDetail(readIssueDetail(item));
+            issueRows.add(issue);
+        }
+
+        if (!issueRows.isEmpty()) {
+            issueRepository.saveAll(issueRows);
+        }
+    }
+
+    private JsonNode getIssueArray(JsonNode reportJson) {
+        JsonNode issues = reportJson.get("issues");
+        if (issues != null && issues.isArray()) {
+            return issues;
+        }
+        JsonNode healthFlags = reportJson.get("health_flags");
+        if (healthFlags != null && healthFlags.isArray()) {
+            return healthFlags;
+        }
+        return null;
+    }
+
+    private String readIssueDetail(JsonNode item) {
+        String detail = readText(item, "detail", readText(item, "message", ""));
+        String target = readText(item, "target", "");
+        if (target == null || target.isBlank()) {
+            return detail;
+        }
+        if (detail == null || detail.isBlank()) {
+            return "target=" + target;
+        }
+        return "target=" + target + " | " + detail;
+    }
+
+    private String readText(JsonNode node, String fieldName, String defaultValue) {
+        if (node == null || node.isNull()) {
+            return defaultValue;
+        }
+        JsonNode value = node.get(fieldName);
+        if (value == null || value.isNull()) {
+            return defaultValue;
+        }
+        return value.asString();
+    }
+
+    private JsonNode readReportJsonOrNull(String body) {
+        if (body == null || body.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(body);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String createFallbackBodyJson(MailRequestDto request, LocalDateTime receivedAt) {
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                    "system_id", request.getSystemId(),
+                    "received_at", HTML_TIME_FORMAT.format(receivedAt),
+                    "body", request.getBody()
+            ));
+        } catch (Exception e) {
+            throw new IllegalStateException("info 원본 JSON 생성에 실패했습니다.");
+        }
+    }
+
+    private String writeJson(JsonNode node) {
+        try {
+            return objectMapper.writeValueAsString(node);
+        } catch (Exception e) {
+            throw new IllegalStateException("info 원본 JSON 저장에 실패했습니다.");
         }
     }
 
@@ -543,6 +662,10 @@ public class MailQueueService {
         if (bodyRaw == null || bodyRaw.isBlank()) {
             throw new IllegalArgumentException("body_raw is empty");
         }
+        JsonNode reportJson = readReportJsonOrNull(bodyRaw);
+        if (reportJson != null && reportJson.isObject()) {
+            return parseInspectionJson(reportJson);
+        }
 
         LocalDateTime inspectionTime = extractRequired(INSPECTION_TIME_PATTERN, bodyRaw, 1, "inspection_time")
                 .flatMap(this::toLocalDateTime)
@@ -593,6 +716,75 @@ public class MailQueueService {
                 nginxLogSummary,
                 null
         );
+    }
+
+    private ParsedInspectionData parseInspectionJson(JsonNode reportJson) {
+        LocalDateTime inspectionTime = firstDateTime(
+                readText(reportJson, "generatedAt", null),
+                readText(reportJson, "generated_at", null),
+                readText(reportJson.path("period"), "to", null)
+        ).orElse(LocalDateTime.now());
+
+        BigDecimal cpuUsage = firstBigDecimal(
+                at(reportJson, "summary", "cpu", "usageAvgPct"),
+                at(reportJson, "summary", "cpu", "usage_avg_pct"),
+                at(reportJson, "summary", "cpu", "usagePeakPct"),
+                at(reportJson, "summary", "cpu", "usage_peak_pct")
+        ).orElse(null);
+
+        BigDecimal memUsage = firstBigDecimal(
+                at(reportJson, "summary", "memory", "usedAvgPct"),
+                at(reportJson, "summary", "memory", "used_effective_avg_pct"),
+                at(reportJson, "summary", "memory", "usedPeakPct"),
+                at(reportJson, "summary", "memory", "used_effective_peak_pct")
+        ).orElse(null);
+
+        Integer memAvailable = firstBigDecimal(
+                at(reportJson, "summary", "memory", "availableMinMb"),
+                at(reportJson, "summary", "memory", "available_min_mb")
+        ).map(BigDecimal::intValue).orElse(null);
+
+        List<DiskUsageItem> diskUsages = parseDiskUsagesFromJson(reportJson);
+
+        return new ParsedInspectionData(
+                inspectionTime,
+                cpuUsage,
+                null,
+                null,
+                memAvailable,
+                memUsage,
+                diskUsages,
+                "SAFE",
+                "SAFE",
+                null,
+                null,
+                null
+        );
+    }
+
+    private List<DiskUsageItem> parseDiskUsagesFromJson(JsonNode reportJson) {
+        JsonNode filesystems = reportJson.get("filesystems");
+        if (filesystems == null || !filesystems.isArray()) {
+            filesystems = reportJson.path("snapshots").get("filesystems");
+        }
+        if (filesystems == null || !filesystems.isArray()) {
+            return Collections.emptyList();
+        }
+
+        List<DiskUsageItem> diskUsages = new ArrayList<>();
+        for (JsonNode item : filesystems) {
+            BigDecimal usedPct = firstBigDecimal(
+                    item.get("usedPct"),
+                    item.get("used_pct")
+            ).orElse(null);
+            if (usedPct == null) {
+                continue;
+            }
+
+            String diskName = readText(item, "mount", readText(item, "device", DEFAULT_DISK_NAME));
+            diskUsages.add(new DiskUsageItem(diskName, usedPct));
+        }
+        return diskUsages;
     }
 
     private List<DiskUsageItem> parseDiskUsages(String bodyRaw) {
@@ -657,11 +849,35 @@ public class MailQueueService {
     }
 
     private Optional<LocalDateTime> toLocalDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
         try {
             return Optional.of(LocalDateTime.parse(value, INSPECTION_TIME_FORMAT));
         } catch (DateTimeParseException e) {
+            try {
+                return Optional.of(OffsetDateTime.parse(value).toLocalDateTime());
+            } catch (DateTimeParseException ignored) {
+                try {
+                    return Optional.of(LocalDateTime.parse(value));
+                } catch (DateTimeParseException ignoredAgain) {
+                    return Optional.empty();
+                }
+            }
+        }
+    }
+
+    private Optional<LocalDateTime> firstDateTime(String... values) {
+        if (values == null) {
             return Optional.empty();
         }
+        for (String value : values) {
+            Optional<LocalDateTime> parsed = toLocalDateTime(value);
+            if (parsed.isPresent()) {
+                return parsed;
+            }
+        }
+        return Optional.empty();
     }
 
     private Optional<BigDecimal> toBigDecimal(String value) {
@@ -670,6 +886,33 @@ public class MailQueueService {
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
+    }
+
+    private Optional<BigDecimal> firstBigDecimal(JsonNode... values) {
+        if (values == null) {
+            return Optional.empty();
+        }
+        for (JsonNode value : values) {
+            if (value == null || value.isMissingNode() || value.isNull()) {
+                continue;
+            }
+            Optional<BigDecimal> parsed = toBigDecimal(value.asString());
+            if (parsed.isPresent()) {
+                return parsed;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private JsonNode at(JsonNode node, String... path) {
+        JsonNode current = node;
+        for (String segment : path) {
+            if (current == null || current.isMissingNode() || current.isNull()) {
+                return null;
+            }
+            current = current.get(segment);
+        }
+        return current;
     }
 
     private Optional<Integer> toInteger(String value) {
