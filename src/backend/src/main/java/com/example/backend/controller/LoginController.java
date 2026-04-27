@@ -3,35 +3,25 @@ package com.example.backend.controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 
-import com.example.backend.repository.UserRepository;
-import com.example.backend.entity.User;
 import com.example.backend.dto.LoginRequest;
-
-import java.util.Optional;
+import com.example.backend.service.UserService;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class LoginController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public LoginController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public LoginController(UserService userService) {
+        this.userService = userService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
 
-        Optional<User> user = userRepository.findByIdAndPassword(
-                req.getId(),
-                req.getPassword()
-        );
-
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
-        } else {
-            return ResponseEntity.status(401).body("fail");
-        }
+        return userService.login(req.getId(), req.getPassword())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(401).body("fail"));
     }
 }

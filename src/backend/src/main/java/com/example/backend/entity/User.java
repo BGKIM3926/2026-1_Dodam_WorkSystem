@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "users")
@@ -13,7 +14,8 @@ public class User {
     @Column(name = "user_id")
     private String id;
 
-    @Column(name = "password")
+    @JsonIgnore
+    @Column(name = "password", length = 100)
     private String password;
 
     @Column(name = "name")
