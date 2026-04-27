@@ -22,6 +22,8 @@
 .env.development.local
 .env.test.local
 .env.production.local
+src/backend/src/main/resources/application-local.properties
+src/backend/src/main/resources/application-*.local.properties
 
 # logs
 npm-debug.log*
