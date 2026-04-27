@@ -769,7 +769,7 @@ export default function CustomizedDataGrid() {
     {
       field: 'version',
       headerName: '버전',
-      width: 110,
+      width: 140,
       sortable: false,
       filterable: false,
       renderHeader: () => (
