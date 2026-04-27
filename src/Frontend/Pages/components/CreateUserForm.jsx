@@ -141,6 +141,28 @@ export default function CreateUserForm({ form, setForm, onSubmit }) {
 
             {/* 폼 */}
             <Box sx={styles.formSection}>
+                {/* 권한 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>권한</Typography>
+                    <FormControl fullWidth>
+                        <Select
+                            value={form.role || ''}
+                            displayEmpty
+                            onChange={(e) =>
+                                setForm({ ...form, role: e.target.value })
+                            }
+                            sx={styles.selectInput}
+                        >
+                            <MenuItem value="" disabled>
+                                권한 선택
+                            </MenuItem>
+                            <MenuItem value="관리자">관리자</MenuItem>
+                            <MenuItem value="팀장">팀장</MenuItem>
+                            <MenuItem value="일반사용자">일반사용자</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
+                
                 {/* 이름 */}
                 <Box>
                     <Typography sx={styles.fieldLabel}>이름</Typography>
@@ -168,28 +190,6 @@ export default function CreateUserForm({ form, setForm, onSubmit }) {
                         }
                         sx={styles.fieldInput}
                     />
-                </Box>
-
-                {/* 권한 */}
-                <Box>
-                    <Typography sx={styles.fieldLabel}>권한</Typography>
-                    <FormControl fullWidth>
-                        <Select
-                            value={form.role || ''}
-                            displayEmpty
-                            onChange={(e) =>
-                                setForm({ ...form, role: e.target.value })
-                            }
-                            sx={styles.selectInput}
-                        >
-                            <MenuItem value="" disabled>
-                                권한 선택
-                            </MenuItem>
-                            <MenuItem value="관리자">관리자</MenuItem>
-                            <MenuItem value="팀장">팀장</MenuItem>
-                            <MenuItem value="일반사용자">일반사용자</MenuItem>
-                        </Select>
-                    </FormControl>
                 </Box>
 
                 {/* ID */}
