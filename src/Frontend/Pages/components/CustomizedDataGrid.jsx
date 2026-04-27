@@ -166,6 +166,8 @@ export default function CustomizedDataGrid() {
 
   useEffect(() => {
     fetchSystems();
+    window.addEventListener('system-version-updated', fetchSystems);
+    return () => window.removeEventListener('system-version-updated', fetchSystems);
   }, []);
 
   const handleRowClick = async (params) => {

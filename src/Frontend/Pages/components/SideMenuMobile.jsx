@@ -44,7 +44,11 @@ function SideMenuMobile({ open, toggleDrawer }) {
 
     fetchTreeData();
     window.addEventListener('legacy-services-updated', fetchTreeData);
-    return () => window.removeEventListener('legacy-services-updated', fetchTreeData);
+    window.addEventListener('system-version-updated', fetchTreeData);
+    return () => {
+      window.removeEventListener('legacy-services-updated', fetchTreeData);
+      window.removeEventListener('system-version-updated', fetchTreeData);
+    };
   }, []);
 
   useEffect(() => {

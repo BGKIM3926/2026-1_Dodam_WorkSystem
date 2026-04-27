@@ -22,6 +22,19 @@ public class LegacyServiceTableInitializer {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """);
+
+        Integer versionColumnCount = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'dsystem'
+              AND COLUMN_NAME = 'version'
+            """, Integer.class);
+
+        if (versionColumnCount == null || versionColumnCount == 0) {
+            jdbcTemplate.execute("ALTER TABLE dsystem ADD COLUMN version VARCHAR(10) NOT NULL DEFAULT '신'");
+        }
+
+        jdbcTemplate.update("UPDATE dsystem SET version = '신' WHERE version IS NULL OR TRIM(version) = ''");
     }
 }
-

@@ -95,6 +95,10 @@ public class DSystemService {
     }
 
     public List<DSystemDto> getAll() {
+        return repository.findAllActiveVersion().stream().map(this::toDto).toList();
+    }
+
+    public List<DSystemDto> getVersionOptions() {
         return repository.findAll().stream().map(this::toDto).toList();
     }
 
@@ -133,6 +137,7 @@ public class DSystemService {
         system.setOsIp(trimToNull(request.getOsIp()));
         system.setOsInfo(trimToNull(request.getOsInfo()));
         system.setStatus(defaultStatus(request.getStatus()));
+        system.setVersion(defaultVersion(request.getVersion()));
         system.setServiceId(mappedServiceId);
         repository.save(system);
 
@@ -157,10 +162,18 @@ public class DSystemService {
 
     public List<DSystemDto> getByService(String serviceName, String customerName) {
         return repository
-                .findByServiceNameMinAndCustomerName(serviceName, customerName)
+                .findActiveByServiceNameMinAndCustomerName(serviceName, customerName)
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Transactional
+    public void updateSystemVersion(Long systemId, String version) {
+        DSystem system = repository.findById(systemId)
+                .orElseThrow(() -> new RuntimeException("System not found: " + systemId));
+        system.setVersion(defaultVersion(version));
+        repository.save(system);
     }
 
     public byte[] exportDSystemExcel(String customerName) {
@@ -254,6 +267,7 @@ public class DSystemService {
         dto.setOsInfo(entity.getOsInfo());
         dto.setStatus(entity.getStatus());
         dto.setServiceId(entity.getServiceId());
+        dto.setVersion(defaultVersion(entity.getVersion()));
         return dto;
     }
 
@@ -301,6 +315,17 @@ public class DSystemService {
         }
 
         return normalizedStatus;
+    }
+
+    private String defaultVersion(String value) {
+        String version = trimToNull(value);
+        if (version == null) {
+            return "신";
+        }
+        if (!version.equals("신") && !version.equals("구")) {
+            throw new IllegalArgumentException("version 값은 신, 구 중 하나여야 합니다.");
+        }
+        return version;
     }
 
     private boolean isAccountEmpty(DSystemUpdateRequest.AccountItem item) {

@@ -20,4 +20,5 @@ public class DSystemDto {
     private String osInfo;
     private String status;
     private Long serviceId;
+    private String version;
 }

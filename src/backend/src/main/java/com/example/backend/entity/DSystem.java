@@ -52,4 +52,7 @@ public class DSystem {
 
     @Column(name = "Service_ID")
     private Long serviceId;
+
+    @Column(name = "version", length = 10)
+    private String version = "신";
 }

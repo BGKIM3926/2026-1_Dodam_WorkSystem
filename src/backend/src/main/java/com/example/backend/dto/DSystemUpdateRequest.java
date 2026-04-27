@@ -20,6 +20,7 @@ public class DSystemUpdateRequest {
     private String osIp;
     private String osInfo;
     private String status;
+    private String version;
 
     private List<AccountItem> accounts;
 

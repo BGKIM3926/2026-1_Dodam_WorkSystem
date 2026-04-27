@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -45,6 +46,11 @@ public class DSystemController {
         return service.getAll();
     }
 
+    @GetMapping("/dsystem/version-options")
+    public List<DSystemDto> getVersionOptions() {
+        return service.getVersionOptions();
+    }
+
     @GetMapping("/dsystem/filter")
     public List<DSystemDto> getByService(
         @RequestParam String serviceName,
@@ -58,6 +64,14 @@ public class DSystemController {
             @PathVariable Long id,
             @RequestBody DSystemUpdateRequest request) {
         service.updateSystemWithAccounts(id, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/dsystem/{id}/version")
+    public ResponseEntity<?> updateSystemVersion(
+            @PathVariable Long id,
+            @RequestBody DSystemUpdateRequest request) {
+        service.updateSystemVersion(id, request.getVersion());
         return ResponseEntity.ok().build();
     }
 
