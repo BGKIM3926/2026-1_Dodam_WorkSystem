@@ -4,7 +4,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.example.backend.entity.converter.EmailEncryptConverter;
 
 @Entity
 @Table(name = "users")
@@ -21,6 +23,10 @@ public class User {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "email", length = 512)
+    @Convert(converter = EmailEncryptConverter.class)
+    private String email;
+
     @Column(name = "role")
     private String role;
 
@@ -32,6 +38,9 @@ public class User {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

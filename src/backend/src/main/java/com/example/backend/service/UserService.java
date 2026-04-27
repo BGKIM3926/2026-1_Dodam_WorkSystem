@@ -40,6 +40,7 @@ public class UserService {
                 .map(user -> new UserResponseDto(
                         user.getId(),
                         user.getName(),
+                        user.getEmail(),
                         user.getRole()))
                 .collect(Collectors.toList());
     }
@@ -63,6 +64,7 @@ public class UserService {
         user.setId(dto.getId());
         user.setPassword(hashPassword(dto.getPassword()));
         user.setName(dto.getName());
+        user.setEmail(trimToNull(dto.getEmail()));
         user.setRole(dto.getRole());
 
         userRepository.save(user);
@@ -74,6 +76,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setName(dto.getName());
+        user.setEmail(trimToNull(dto.getEmail()));
         user.setRole(dto.getRole());
 
         // 🔥 password는 있을 때만 변경
@@ -91,6 +94,7 @@ public class UserService {
                 .map(user -> new UserResponseDto(
                         user.getId(),
                         user.getName(),
+                        user.getEmail(),
                         user.getRole()));
     }
 
@@ -160,6 +164,14 @@ public class UserService {
 
     private boolean isPbkdf2Hash(String password) {
         return password.startsWith(PASSWORD_HASH_PREFIX + "$");
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     // 🔹 삭제

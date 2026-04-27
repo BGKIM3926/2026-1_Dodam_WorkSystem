@@ -63,6 +63,7 @@ const createEmptySystemForm = () => ({
   osName: '',
   osIp: '',
   osInfo: '',
+  status: 'SAFE',
 });
 
 const createEmptyAccount = () => ({
@@ -198,6 +199,7 @@ export default function CustomizedDataGrid() {
       osName: row.osName || '',
       osIp: row.osIp || '',
       osInfo: row.osInfo || '',
+      status: row.status || 'SAFE',
     });
 
     try {
@@ -282,6 +284,7 @@ export default function CustomizedDataGrid() {
     osName: form.osName,
     osIp: form.osIp,
     osInfo: form.osInfo,
+    status: form.status || 'SAFE',
     accounts: accounts.map((acc) => {
       const payload = {
         systemType: acc.systemType,

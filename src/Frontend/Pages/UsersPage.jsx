@@ -12,7 +12,8 @@ export default function UsersPage() {
         id: '',
         password: '',
         name: '',
-        role: 'USER'
+        email: '',
+        role: '일반사용자'
     });
 
     // 🔥 조회

@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -20,6 +21,8 @@ import com.example.backend.repository.DSystemRepository;
 
 @Service
 public class DSystemService {
+
+    private static final Set<String> VALID_SYSTEM_STATUSES = Set.of("SAFE", "WARNING", "DANGER");
 
     private final DSystemRepository repository;
     private final DSystemAccountRepository accountRepository;
@@ -44,6 +47,7 @@ public class DSystemService {
         system.setOsName(request.getOsName());
         system.setOsIp(request.getOsIp());
         system.setOsInfo(request.getOsInfo());
+        system.setStatus(defaultStatus(request.getStatus()));
         repository.save(system);
 
         // 기존 계정 목록 조회
@@ -128,6 +132,7 @@ public class DSystemService {
         system.setOsName(trimToNull(request.getOsName()));
         system.setOsIp(trimToNull(request.getOsIp()));
         system.setOsInfo(trimToNull(request.getOsInfo()));
+        system.setStatus(defaultStatus(request.getStatus()));
         system.setServiceId(mappedServiceId);
         repository.save(system);
 
@@ -166,7 +171,8 @@ public class DSystemService {
 
             Sheet sheet = workbook.createSheet("dsystem");
             createHeaderRow(sheet, "SYSTEM_ID", "CUSTOMER_NAME", "SERVICE_NAME", "SERVICE_NAME_MIN", "SYSTEM_NAME",
-                    "SYSTEM_NAME_MIN", "HARDWARE_NAME", "HARDWARE_INFO", "OS_NAME", "OS_IP", "OS_INFO", "SERVICE_ID");
+                    "SYSTEM_NAME_MIN", "HARDWARE_NAME", "HARDWARE_INFO", "OS_NAME", "OS_IP", "OS_INFO", "STATUS",
+                    "SERVICE_ID");
 
             int rowIndex = 1;
             for (DSystem system : systems) {
@@ -182,10 +188,11 @@ public class DSystemService {
                 row.createCell(8).setCellValue(valueOf(system.getOsName()));
                 row.createCell(9).setCellValue(valueOf(system.getOsIp()));
                 row.createCell(10).setCellValue(valueOf(system.getOsInfo()));
-                row.createCell(11).setCellValue(valueOf(system.getServiceId()));
+                row.createCell(11).setCellValue(valueOf(system.getStatus()));
+                row.createCell(12).setCellValue(valueOf(system.getServiceId()));
             }
 
-            autosizeColumns(sheet, 12);
+            autosizeColumns(sheet, 13);
             workbook.write(outputStream);
             return outputStream.toByteArray();
         } catch (IOException ex) {
@@ -245,6 +252,7 @@ public class DSystemService {
         dto.setOsName(entity.getOsName());
         dto.setOsIp(entity.getOsIp());
         dto.setOsInfo(entity.getOsInfo());
+        dto.setStatus(entity.getStatus());
         dto.setServiceId(entity.getServiceId());
         return dto;
     }
@@ -279,6 +287,20 @@ public class DSystemService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String defaultStatus(String value) {
+        String status = trimToNull(value);
+        if (status == null) {
+            return "SAFE";
+        }
+
+        String normalizedStatus = status.toUpperCase(java.util.Locale.ROOT);
+        if (!VALID_SYSTEM_STATUSES.contains(normalizedStatus)) {
+            throw new IllegalArgumentException("status 값은 SAFE, WARNING, DANGER 중 하나여야 합니다.");
+        }
+
+        return normalizedStatus;
     }
 
     private boolean isAccountEmpty(DSystemUpdateRequest.AccountItem item) {

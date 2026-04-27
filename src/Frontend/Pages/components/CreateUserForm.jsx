@@ -155,6 +155,21 @@ export default function CreateUserForm({ form, setForm, onSubmit }) {
                     />
                 </Box>
 
+                {/* 이메일 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>이메일</Typography>
+                    <TextField
+                        fullWidth
+                        type="email"
+                        placeholder="이메일을 입력하세요"
+                        value={form.email}
+                        onChange={(e) =>
+                            setForm({ ...form, email: e.target.value })
+                        }
+                        sx={styles.fieldInput}
+                    />
+                </Box>
+
                 {/* 권한 */}
                 <Box>
                     <Typography sx={styles.fieldLabel}>권한</Typography>
@@ -197,6 +212,7 @@ export default function CreateUserForm({ form, setForm, onSubmit }) {
                     <TextField
                         fullWidth
                         type="password"
+                        autoComplete="new-password"
                         placeholder="비밀번호를 입력하세요"
                         value={form.password}
                         onChange={(e) =>

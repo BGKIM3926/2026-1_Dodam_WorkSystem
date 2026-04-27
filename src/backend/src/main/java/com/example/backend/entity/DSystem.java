@@ -47,6 +47,9 @@ public class DSystem {
     @Column(name = "OS_Info")
     private String osInfo;
 
+    @Column(name = "status", length = 30)
+    private String status;
+
     @Column(name = "Service_ID")
     private Long serviceId;
 }

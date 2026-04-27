@@ -27,14 +27,13 @@ export default function UsersList({ rows, fetchUsers }) {
 
     // 🔥 수정
     const handleUpdate = async () => {
-        console.log('🔥 update form:', form);
-
         await fetch(`/api/users/${selectedRow.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id: selectedRow.id,
                 name: form.name,
+                email: form.email,
                 role: form.role,
                 password: form.password
             })
@@ -86,6 +85,12 @@ export default function UsersList({ rows, fetchUsers }) {
                                 ID: {row.id}
                             </Typography>
 
+                            {row.email && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Email: {row.email}
+                                </Typography>
+                            )}
+
                             <Typography variant="body2">
                                 Role: {row.role}
                             </Typography>
@@ -111,8 +116,18 @@ export default function UsersList({ rows, fetchUsers }) {
                     <TextField
                         fullWidth
                         margin="dense"
+                        label="이메일"
+                        type="email"
+                        value={form.email || ''}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    />
+
+                    <TextField
+                        fullWidth
+                        margin="dense"
                         label="비밀번호"
                         type="password"
+                        autoComplete="new-password"
                         value={form.password || ''}
                         onChange={(e) => setForm({ ...form, password: e.target.value })}
                         helperText="비워두면 변경되지 않음"

@@ -10,7 +10,8 @@ export default function CreateUser() {
         id: '',
         password: '',
         name: '',
-        role: 'USER'
+        email: '',
+        role: '일반사용자'
     });
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
@@ -24,8 +25,6 @@ export default function CreateUser() {
         }
 
         try {
-            console.log('🔥 form:', form);
-
             const res = await fetch('/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
