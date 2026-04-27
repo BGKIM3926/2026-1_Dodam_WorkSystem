@@ -246,6 +246,8 @@ export default function ServiceSettings() {
                     clickable
                     color={activeTab === 'service' ? 'primary' : 'default'}
                     variant={activeTab === 'service' ? 'filled' : 'outlined'}
+                    size="large"
+                    sx={{ flexShrink: 0 }}
                     onClick={() => setActiveTab('service')}
                 />
                 <Chip
@@ -253,6 +255,8 @@ export default function ServiceSettings() {
                     clickable
                     color={activeTab === 'systemVersion' ? 'primary' : 'default'}
                     variant={activeTab === 'systemVersion' ? 'filled' : 'outlined'}
+                    size="large"
+                    sx={{ flexShrink: 0 }}
                     onClick={() => setActiveTab('systemVersion')}
                 />
             </Stack>
