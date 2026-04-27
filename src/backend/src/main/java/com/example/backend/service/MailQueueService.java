@@ -89,6 +89,8 @@ public class MailQueueService {
             Pattern.compile("(?s)\\[3\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Postfix\\)\\s*(.*?)(?=\\n\\s*\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)|\\z)");
     private static final Pattern NGINX_SUMMARY_PATTERN =
             Pattern.compile("(?s)\\[4\\]\\s*금일\\s*서비스\\s*로그\\s*요약\\s*\\(Nginx\\)\\s*(.*)$");
+    private static final Pattern BARE_DASH_JSON_VALUE_PATTERN =
+            Pattern.compile("(:\\s*)-(\\s*[,}\\]])");
 
     private final DSystemRepository dSystemRepository;
     private final InfoRepository infoRepository;
@@ -233,8 +235,20 @@ public class MailQueueService {
         try {
             return objectMapper.readTree(body);
         } catch (Exception e) {
-            return null;
+            String repairedBody = repairCollectorJson(body);
+            if (repairedBody.equals(body)) {
+                return null;
+            }
+            try {
+                return objectMapper.readTree(repairedBody);
+            } catch (Exception ignored) {
+                return null;
+            }
         }
+    }
+
+    private String repairCollectorJson(String body) {
+        return BARE_DASH_JSON_VALUE_PATTERN.matcher(body).replaceAll("$1null$2");
     }
 
     private String createFallbackBodyJson(MailRequestDto request, LocalDateTime receivedAt) {
