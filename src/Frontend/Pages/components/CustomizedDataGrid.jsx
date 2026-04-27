@@ -682,8 +682,6 @@ export default function CustomizedDataGrid() {
         </FormControl>
       ),
     },
-    { field: 'serviceNameMin', headerName: '서비스명', flex: 1, sortable: false, filterable: false },
-    { field: 'systemNameMin', headerName: '시스템명', flex: 1, sortable: false, filterable: false },
     {
       field: 'version',
       headerName: '버전',
@@ -709,6 +707,8 @@ export default function CustomizedDataGrid() {
       ),
       renderCell: (params) => params.row.version || '신',
     },
+    { field: 'serviceNameMin', headerName: '서비스명', flex: 1, sortable: false, filterable: false },
+    { field: 'systemNameMin', headerName: '시스템명', flex: 1, sortable: false, filterable: false },
     { field: 'hardwareName', headerName: '하드웨어', flex: 1, sortable: false, filterable: false },
     { field: 'osName', headerName: 'OS', flex: 1, sortable: false, filterable: false },
     { field: 'osIp', headerName: 'IP', flex: 1, sortable: false, filterable: false },
@@ -760,10 +760,39 @@ export default function CustomizedDataGrid() {
           <div style={{ lineHeight: 1.4 }}>
             <div style={{ fontWeight: 600 }}>{params.row.customerName}</div>
             <div style={{ fontSize: 12, color: '#666' }}>
-              {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp} / {params.row.version || '신'}
+              {params.row.serviceNameMin} / {params.row.systemNameMin} / {params.row.osIp}
             </div>
           </div>
         </div>
+      ),
+    },
+    {
+      field: 'version',
+      headerName: '버전',
+      width: 110,
+      sortable: false,
+      filterable: false,
+      renderHeader: () => (
+        <FormControl size="small" fullWidth>
+          <Select
+            value={versionFilter}
+            displayEmpty
+            onChange={(e) => setVersionFilter(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            sx={{ fontSize: 14 }}
+          >
+            <MenuItem value="">
+              <em>전체</em>
+            </MenuItem>
+            <MenuItem value="신">신</MenuItem>
+            <MenuItem value="구">구</MenuItem>
+          </Select>
+        </FormControl>
+      ),
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', height: '100%', fontWeight: 600 }}>
+          {params.row.version || '신'}
+        </Box>
       ),
     },
   ];
