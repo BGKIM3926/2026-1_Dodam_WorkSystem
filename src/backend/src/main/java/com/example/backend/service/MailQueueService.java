@@ -166,14 +166,14 @@ public class MailQueueService {
         Info info = new Info();
         info.setBodyRawJson(bodyRawJson);
         info.setTime(receivedAt);
-        infoRepository.save(info);
+        Info savedInfo = infoRepository.save(info);
 
         if (reportJson != null) {
-            saveIssues(reportJson);
+            saveIssues(reportJson, savedInfo.getId());
         }
     }
 
-    private void saveIssues(JsonNode reportJson) {
+    private void saveIssues(JsonNode reportJson, Long infoId) {
         JsonNode issues = getIssueArray(reportJson);
         if (issues == null || !issues.isArray()) {
             return;
@@ -182,6 +182,7 @@ public class MailQueueService {
         List<Issue> issueRows = new ArrayList<>();
         for (JsonNode item : issues) {
             Issue issue = new Issue();
+            issue.setInfoId(infoId);
             issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));

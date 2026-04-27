@@ -17,6 +17,9 @@ public class Issue {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "info_id")
+    private Long infoId;
+
     @Column(name = "type", length = 100)
     private String type;
 
@@ -33,6 +36,14 @@ public class Issue {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getInfoId() {
+        return infoId;
+    }
+
+    public void setInfoId(Long infoId) {
+        this.infoId = infoId;
     }
 
     public String getType() {
