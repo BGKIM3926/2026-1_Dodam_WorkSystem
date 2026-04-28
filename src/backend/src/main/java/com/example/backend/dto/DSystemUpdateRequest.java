@@ -21,6 +21,7 @@ public class DSystemUpdateRequest {
     private String osInfo;
     private String status;
     private String version;
+    private String manager;
 
     private List<AccountItem> accounts;
 

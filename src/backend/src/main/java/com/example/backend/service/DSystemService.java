@@ -48,6 +48,7 @@ public class DSystemService {
         system.setOsIp(request.getOsIp());
         system.setOsInfo(request.getOsInfo());
         system.setStatus(defaultStatus(request.getStatus()));
+        system.setManager(defaultManager(request.getManager()));
         repository.save(system);
 
         // 기존 계정 목록 조회
@@ -138,6 +139,7 @@ public class DSystemService {
         system.setOsInfo(trimToNull(request.getOsInfo()));
         system.setStatus(defaultStatus(request.getStatus()));
         system.setVersion(defaultVersion(request.getVersion()));
+        system.setManager(defaultManager(request.getManager()));
         system.setServiceId(mappedServiceId);
         repository.save(system);
 
@@ -185,7 +187,7 @@ public class DSystemService {
             Sheet sheet = workbook.createSheet("dsystem");
             createHeaderRow(sheet, "SYSTEM_ID", "CUSTOMER_NAME", "SERVICE_NAME", "SERVICE_NAME_MIN", "SYSTEM_NAME",
                     "SYSTEM_NAME_MIN", "HARDWARE_NAME", "HARDWARE_INFO", "OS_NAME", "OS_IP", "OS_INFO", "STATUS",
-                    "SERVICE_ID");
+                    "SERVICE_ID", "VERSION", "MANAGER");
 
             int rowIndex = 1;
             for (DSystem system : systems) {
@@ -203,9 +205,11 @@ public class DSystemService {
                 row.createCell(10).setCellValue(valueOf(system.getOsInfo()));
                 row.createCell(11).setCellValue(valueOf(system.getStatus()));
                 row.createCell(12).setCellValue(valueOf(system.getServiceId()));
+                row.createCell(13).setCellValue(valueOf(defaultVersion(system.getVersion())));
+                row.createCell(14).setCellValue(valueOf(defaultManager(system.getManager())));
             }
 
-            autosizeColumns(sheet, 13);
+            autosizeColumns(sheet, 15);
             workbook.write(outputStream);
             return outputStream.toByteArray();
         } catch (IOException ex) {
@@ -268,6 +272,7 @@ public class DSystemService {
         dto.setStatus(entity.getStatus());
         dto.setServiceId(entity.getServiceId());
         dto.setVersion(defaultVersion(entity.getVersion()));
+        dto.setManager(defaultManager(entity.getManager()));
         return dto;
     }
 
@@ -326,6 +331,17 @@ public class DSystemService {
             throw new IllegalArgumentException("version 값은 신, 구 중 하나여야 합니다.");
         }
         return version;
+    }
+
+    private String defaultManager(String value) {
+        String manager = trimToNull(value);
+        if (manager == null) {
+            return "조상현";
+        }
+        if (manager.length() > 10) {
+            throw new IllegalArgumentException("manager 값은 10자 이하여야 합니다.");
+        }
+        return manager;
     }
 
     private boolean isAccountEmpty(DSystemUpdateRequest.AccountItem item) {

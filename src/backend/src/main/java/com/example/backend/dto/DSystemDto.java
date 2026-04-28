@@ -21,4 +21,5 @@ public class DSystemDto {
     private String status;
     private Long serviceId;
     private String version;
+    private String manager;
 }

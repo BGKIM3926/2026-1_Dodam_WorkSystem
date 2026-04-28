@@ -36,5 +36,20 @@ public class LegacyServiceTableInitializer {
         }
 
         jdbcTemplate.update("UPDATE dsystem SET version = '신' WHERE version IS NULL OR TRIM(version) = ''");
+
+        Integer managerColumnCount = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'dsystem'
+              AND COLUMN_NAME = 'manager'
+            """, Integer.class);
+
+        if (managerColumnCount == null || managerColumnCount == 0) {
+            jdbcTemplate.execute("ALTER TABLE dsystem ADD COLUMN manager VARCHAR(10) NOT NULL DEFAULT '조상현'");
+        }
+
+        jdbcTemplate.update("UPDATE dsystem SET manager = '조상현' WHERE manager IS NULL OR TRIM(manager) = ''");
+        jdbcTemplate.execute("ALTER TABLE dsystem MODIFY COLUMN manager VARCHAR(10) NOT NULL DEFAULT '조상현'");
     }
 }

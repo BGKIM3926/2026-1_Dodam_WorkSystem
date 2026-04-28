@@ -55,4 +55,7 @@ public class DSystem {
 
     @Column(name = "version", length = 10)
     private String version = "신";
+
+    @Column(name = "manager", length = 10)
+    private String manager = "조상현";
 }

@@ -64,6 +64,7 @@ const createEmptySystemForm = () => ({
   osIp: '',
   osInfo: '',
   status: 'SAFE',
+  manager: '조상현',
 });
 
 const createEmptyAccount = () => ({
@@ -157,7 +158,12 @@ export default function CustomizedDataGrid() {
       const data = await res.json();
       const mapped = data
         .filter(hasCustomerGridContent)
-        .map((item, index) => ({ id: item.systemID ?? index, ...item, version: item.version || '신' }));
+        .map((item, index) => ({
+          id: item.systemID ?? index,
+          ...item,
+          version: item.version || '신',
+          manager: item.manager || '조상현',
+        }));
       setRows(mapped);
     } catch (err) {
       console.error(err);
@@ -204,6 +210,7 @@ export default function CustomizedDataGrid() {
       osIp: row.osIp || '',
       osInfo: row.osInfo || '',
       status: row.status || 'SAFE',
+      manager: row.manager || '조상현',
     });
 
     try {
@@ -289,6 +296,7 @@ export default function CustomizedDataGrid() {
     osIp: form.osIp,
     osInfo: form.osInfo,
     status: form.status || 'SAFE',
+    manager: form.manager || '조상현',
     accounts: accounts.map((acc) => {
       const payload = {
         systemType: acc.systemType,
@@ -1013,6 +1021,13 @@ export default function CustomizedDataGrid() {
             <TextField label="하드웨어명" size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
             <TextField label="OS명" size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
             <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
+            <TextField
+              label="담당자"
+              size="small"
+              value={editForm.manager || ''}
+              onChange={(e) => handleEditFormChange('manager', e.target.value)}
+              inputProps={{ maxLength: 10 }}
+            />
           </Box>
           <Box sx={{ mt: 2 }}>
             <TextField

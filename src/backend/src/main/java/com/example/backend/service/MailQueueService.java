@@ -24,9 +24,11 @@ import com.example.backend.dto.MailResponseDto;
 import com.example.backend.entity.DSystem;
 import com.example.backend.entity.Info;
 import com.example.backend.entity.Issue;
+import com.example.backend.entity.User;
 import com.example.backend.repository.DSystemRepository;
 import com.example.backend.repository.InfoRepository;
 import com.example.backend.repository.IssueRepository;
+import com.example.backend.repository.UserRepository;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -46,6 +48,7 @@ public class MailQueueService {
     private final DSystemRepository dSystemRepository;
     private final InfoRepository infoRepository;
     private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${mail.queue-dir:mail-queue}")
@@ -55,11 +58,13 @@ public class MailQueueService {
             DSystemRepository dSystemRepository,
             InfoRepository infoRepository,
             IssueRepository issueRepository,
+            UserRepository userRepository,
             ObjectMapper objectMapper
     ) {
         this.dSystemRepository = dSystemRepository;
         this.infoRepository = infoRepository;
         this.issueRepository = issueRepository;
+        this.userRepository = userRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -75,6 +80,7 @@ public class MailQueueService {
 
         SavedReport savedReport = saveInfoAndIssues(request, receivedAt);
         ReportStats reportStats = calculateReportStats(savedReport.issues());
+        String recipientEmail = findRecipientEmail(savedReport.info(), dsystemId);
         List<IssueGroup> issueGroups = buildIssueGroups(dSystem, savedReport.issues());
 
         try {
@@ -82,6 +88,7 @@ public class MailQueueService {
                     requestId,
                     systemIdText,
                     receivedAt,
+                    recipientEmail,
                     reportStats,
                     issueGroups
             );
@@ -230,6 +237,7 @@ public class MailQueueService {
             String requestId,
             String systemId,
             LocalDateTime generatedAt,
+            String recipientEmail,
             ReportStats reportStats,
             List<IssueGroup> issueGroups
     ) throws IOException {
@@ -241,7 +249,7 @@ public class MailQueueService {
         String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".html";
         Path filePath = resolvedQueueDir.resolve(fileName);
 
-        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt);
+        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, recipientEmail);
         Files.writeString(filePath, html, StandardCharsets.UTF_8);
         return filePath;
     }
@@ -257,9 +265,11 @@ public class MailQueueService {
     private String buildHtmlPayload(
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
-            LocalDateTime generatedAt
+            LocalDateTime generatedAt,
+            String recipientEmail
     ) {
         String issueRows = buildIssueRows(issueGroups);
+        String recipientLine = buildRecipientLine(recipientEmail);
 
         return """
                 <!doctype html>
@@ -310,6 +320,13 @@ public class MailQueueService {
                     }
                     .section {
                       margin-top: 42px;
+                    }
+                    .recipient {
+                      margin: 28px 0 -18px;
+                      color: #424240;
+                      font-size: 14px;
+                      line-height: 22px;
+                      font-weight: 700;
                     }
                     .section-title {
                       height: 24px;
@@ -386,6 +403,7 @@ public class MailQueueService {
                       <div class="meta">생성시각: %s</div>
                       <div class="top-line"></div>
 
+                %s
                       <div class="section">
                         <div class="section-title">통계</div>
                         <div class="section-line"></div>
@@ -431,11 +449,19 @@ public class MailQueueService {
                 </html>
                 """.formatted(
                 HTML_TIME_FORMAT.format(generatedAt),
+                recipientLine,
                 reportStats.normalCount(),
                 reportStats.warningCount(),
                 reportStats.dangerCount(),
                 issueRows
         );
+    }
+
+    private String buildRecipientLine(String recipientEmail) {
+        if (recipientEmail == null || recipientEmail.isBlank()) {
+            return "";
+        }
+        return "      <div class=\"recipient\">발송할 주소 : %s</div>%n".formatted(escapeHtml(recipientEmail.trim()));
     }
 
     private String buildIssueRows(List<IssueGroup> issueGroups) {
@@ -573,6 +599,45 @@ public class MailQueueService {
 
     private String escapeHtmlWithLineBreaks(String value) {
         return escapeHtml(value).replace("\n", "<br />");
+    }
+
+    private String findRecipientEmail(Info info, Long fallbackSystemId) {
+        Long dsystemId = readDSystemIdFromBodyRawJson(info.getBodyRawJson()).orElse(fallbackSystemId);
+        return dSystemRepository.findById(dsystemId)
+                .map(DSystem::getManager)
+                .map(String::trim)
+                .filter(manager -> !manager.isBlank())
+                .flatMap(userRepository::findFirstByName)
+                .map(User::getEmail)
+                .map(String::trim)
+                .filter(email -> !email.isBlank())
+                .orElse("");
+    }
+
+    private Optional<Long> readDSystemIdFromBodyRawJson(String bodyRawJson) {
+        if (bodyRawJson == null || bodyRawJson.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            JsonNode root = objectMapper.readTree(bodyRawJson);
+            return readLong(root, "dsystem_id")
+                    .or(() -> readLong(root, "dsystemId"))
+                    .or(() -> readLong(root, "system_id"))
+                    .or(() -> readLong(root, "systemId"));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<Long> readLong(JsonNode node, String fieldName) {
+        if (node == null || node.isNull()) {
+            return Optional.empty();
+        }
+        JsonNode value = node.get(fieldName);
+        if (value == null || value.isNull()) {
+            return Optional.empty();
+        }
+        return parseSystemId(value.asString());
     }
 
     private String sanitizeSystemId(String systemId) {
