@@ -1,5 +1,0 @@
-spring.datasource.url=jdbc:mariadb://localhost:3306/kbk_db
-spring.datasource.username=kbk_db
-spring.datasource.password=qnrkd11609*
-file.upload-root=/mnt/attachments
-mail.queue-dir=/mnt/queue
