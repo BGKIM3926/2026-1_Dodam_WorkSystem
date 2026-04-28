@@ -275,176 +275,70 @@ public class MailQueueService {
                 <!doctype html>
                 <html lang="ko">
                 <head>
-                  <meta charset="UTF-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <meta charset="UTF-8">
                   <title>점검 상태 보고서</title>
-                  <style>
-                    .mail-font {
-                      font-family: "NanumGothic", "Malgun Gothic", "Apple SD Gothic Neo", Dotum, Helvetica, sans-serif;
-                    }
-                    body {
-                      margin: 0;
-                      padding: 0;
-                      color: #333;
-                      background: #f3f5f8;
-                      -webkit-text-size-adjust: 100%%;
-                    }
-                    .wrap {
-                      max-width: 595px;
-                      margin: 0 auto;
-                      background: #fff;
-                    }
-                    .inner {
-                      padding: 56px 21px 44px;
-                    }
-                    .title {
-                      margin: 0;
-                      color: #424240;
-                      font-size: 28px;
-                      line-height: 34px;
-                      font-weight: 700;
-                    }
-                    .title span {
-                      color: #2f6fed;
-                    }
-                    .meta {
-                      margin: 14px 0 0;
-                      color: #696969;
-                      font-size: 13px;
-                      line-height: 20px;
-                    }
-                    .top-line {
-                      height: 1px;
-                      margin: 26px 0 0;
-                      background: #e5e5e5;
-                    }
-                    .section {
-                      margin-top: 42px;
-                    }
-                    .recipient {
-                      margin: 28px 0 -18px;
-                      color: #424240;
-                      font-size: 14px;
-                      line-height: 22px;
-                      font-weight: 700;
-                    }
-                    .section-title {
-                      height: 24px;
-                      color: #000;
-                      font-size: 14px;
-                      line-height: 24px;
-                      font-weight: 700;
-                    }
-                    .section-line {
-                      height: 2px;
-                      margin-top: 0;
-                      background: #424240;
-                    }
-                    table {
-                      width: 100%%;
-                      border-collapse: collapse;
-                      table-layout: fixed;
-                    }
-                    th, td {
-                      padding: 15px 10px;
-                      border: 0;
-                      border-bottom: 1px dotted #e6e6e6;
-                      text-align: center;
-                      font-size: 14px;
-                      line-height: 22px;
-                      word-break: keep-all;
-                      vertical-align: middle;
-                    }
-                    th {
-                      padding-top: 18px;
-                      color: #696969;
-                      background: #fff;
-                      font-weight: 700;
-                    }
-                    td.left {
-                      text-align: left;
-                      word-break: break-word;
-                    }
-                    .normal {
-                      color: #137333;
-                      font-weight: 700;
-                    }
-                    .warning {
-                      color: #b26a00;
-                      font-weight: 700;
-                    }
-                    .danger {
-                      color: #b42318;
-                      font-weight: 700;
-                    }
-                    .empty {
-                      color: #777;
-                    }
-                    .stat-value {
-                      font-family: Helvetica, sans-serif;
-                      font-size: 30px;
-                      line-height: 34px;
-                      font-weight: 700;
-                    }
-                    .footer {
-                      margin-top: 34px;
-                      padding: 18px 21px;
-                      color: #696969;
-                      background: #e5e5e5;
-                      font-size: 12px;
-                      line-height: 17px;
-                    }
-                  </style>
                 </head>
-                <body class="mail-font">
-                  <div class="wrap">
-                    <div class="inner">
-                      <h1 class="title">시스템 <span>점검 상태 보고서</span></h1>
-                      <div class="meta">생성시각: %s</div>
-                      <div class="top-line"></div>
-
+                <body style="margin:0; padding:0; background:#ffffff; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif; -webkit-text-size-adjust:100%%;">
+                  <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; margin:0; padding:0; background:#ffffff; border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0; margin:0;">
+                        <table width="595" cellpadding="0" cellspacing="0" border="0" style="width:595px; max-width:595px; background:#ffffff; border-collapse:collapse; table-layout:fixed;">
+                          <tr>
+                            <td style="padding:56px 21px 44px; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                              <div style="margin:0; padding:0; color:#424240; font-size:28px; line-height:34px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                시스템 <span style="color:#2f6fed;">점검 상태 보고서</span>
+                              </div>
+                              <div style="margin:14px 0 0; padding:0; color:#696969; font-size:13px; line-height:20px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                생성시각: %s
+                              </div>
+                              <div style="height:1px; line-height:1px; font-size:1px; margin:26px 0 0; background:#e5e5e5;">&nbsp;</div>
                 %s
-                      <div class="section">
-                        <div class="section-title">통계</div>
-                        <div class="section-line"></div>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>정상(건)</th>
-                              <th>경고</th>
-                              <th>위험</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><span class="stat-value normal">%d</span></td>
-                              <td><span class="stat-value warning">%d</span></td>
-                              <td><span class="stat-value danger">%d</span></td>
-                            </tr>
-                          </tbody>
+                              <div style="height:24px; line-height:24px; font-size:24px;">&nbsp;</div>
+                              <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                통계
+                              </div>
+                              <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
+                              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
+                                <tr>
+                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">정상(건)</th>
+                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">경고</th>
+                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">위험</th>
+                                </tr>
+                                <tr>
+                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                    <span style="color:#137333; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
+                                  </td>
+                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                    <span style="color:#b26a00; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
+                                  </td>
+                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                    <span style="color:#b42318; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
+                                  </td>
+                                </tr>
+                              </table>
+                              <div style="height:42px; line-height:42px; font-size:42px;">&nbsp;</div>
+                              <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                이슈
+                              </div>
+                              <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
+                              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
+                                <tr>
+                                  <th width="20%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">고객사</th>
+                                  <th width="20%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">시스템명</th>
+                                  <th width="60%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈내용</th>
+                                </tr>
+                %s              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:18px 21px; color:#696969; background:#e5e5e5; font-size:12px; line-height:17px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                              본 메일은 시스템 점검 결과를 바탕으로 자동 생성되었습니다.
+                            </td>
+                          </tr>
                         </table>
-                      </div>
-
-                      <div class="section">
-                        <div class="section-title">이슈</div>
-                        <div class="section-line"></div>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th style="width:20%%;">고객사</th>
-                              <th style="width:20%%;">시스템명</th>
-                              <th>이슈내용</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                %s        </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    <div class="footer">
-                      본 메일은 시스템 점검 결과를 바탕으로 자동 생성되었습니다.
-                    </div>
-                  </div>
+                      </td>
+                    </tr>
+                  </table>
                 </body>
                 </html>
                 """.formatted(
@@ -461,26 +355,30 @@ public class MailQueueService {
         if (recipientEmail == null || recipientEmail.isBlank()) {
             return "";
         }
-        return "      <div class=\"recipient\">발송할 주소 : %s</div>%n".formatted(escapeHtml(recipientEmail.trim()));
+        return """
+                              <div style="margin:28px 0 0; padding:0; color:#424240; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                발송할 주소 : %s
+                              </div>
+                """.formatted(escapeHtml(recipientEmail.trim()));
     }
 
     private String buildIssueRows(List<IssueGroup> issueGroups) {
         if (issueGroups.isEmpty()) {
             return """
-                      <tr>
-                        <td class="empty" colspan="3">경고 또는 위험 이슈가 없습니다.</td>
-                      </tr>
+                                <tr>
+                                  <td colspan="3" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; color:#777; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">경고 또는 위험 이슈가 없습니다.</td>
+                                </tr>
                 """;
         }
 
         StringBuilder rows = new StringBuilder();
         for (IssueGroup issueGroup : issueGroups) {
             rows.append("""
-                    <tr>
-                      <td class="left">%s</td>
-                      <td class="left">%s</td>
-                      <td class="left">%s</td>
-                    </tr>
+                                <tr>
+                                  <td width="20%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="20%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="60%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                </tr>
                     """.formatted(
                     escapeHtml(issueGroup.customerName()),
                     escapeHtml(issueGroup.systemName()),
