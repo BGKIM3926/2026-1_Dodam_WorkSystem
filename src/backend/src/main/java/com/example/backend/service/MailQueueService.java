@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,14 +74,16 @@ public class MailQueueService {
         DSystem dSystem = findDSystemOrThrow(dsystemId);
 
         SavedReport savedReport = saveInfoAndIssues(request, receivedAt);
+        ReportStats reportStats = calculateReportStats(savedReport.issues());
+        List<IssueGroup> issueGroups = buildIssueGroups(dSystem, savedReport.issues());
 
         try {
             writeQueueHtmlFile(
                     requestId,
                     systemIdText,
                     receivedAt,
-                    dSystem,
-                    isReportSafe(savedReport.reportJson())
+                    reportStats,
+                    issueGroups
             );
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
@@ -98,27 +102,29 @@ public class MailQueueService {
         info.setTime(receivedAt);
         Info savedInfo = infoRepository.save(info);
 
-        if (reportJson != null) {
-            saveIssues(reportJson, savedInfo.getId());
-        }
+        List<Issue> savedIssues = reportJson == null
+                ? List.of()
+                : saveIssues(reportJson, savedInfo.getId());
 
-        return new SavedReport(reportJson, savedInfo);
+        return new SavedReport(reportJson, savedInfo, savedIssues);
     }
 
-    private void saveIssues(JsonNode reportJson, Long infoId) {
+    private List<Issue> saveIssues(JsonNode reportJson, Long infoId) {
         JsonNode issues = getIssueArray(reportJson);
         if (issues == null || !issues.isArray()) {
-            return;
+            return List.of();
         }
 
+        List<Issue> savedIssues = new ArrayList<>();
         for (JsonNode item : issues) {
             Issue issue = new Issue();
             issue.setInfoId(infoId);
             issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));
-            issueRepository.save(issue);
+            savedIssues.add(issueRepository.save(issue));
         }
+        return savedIssues;
     }
 
     private JsonNode getIssueArray(JsonNode reportJson) {
@@ -131,27 +137,6 @@ public class MailQueueService {
             return healthFlags;
         }
         return null;
-    }
-
-    private boolean isReportSafe(JsonNode reportJson) {
-        if (reportJson == null) {
-            return true;
-        }
-        JsonNode issues = getIssueArray(reportJson);
-        if (issues == null || !issues.isArray()) {
-            return true;
-        }
-        for (JsonNode item : issues) {
-            String level = readText(item, "level", readText(item, "value", ""));
-            if (level == null || level.isBlank()) {
-                return false;
-            }
-            String normalized = level.trim().toUpperCase();
-            if (!normalized.equals("INFO")) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private String readIssueDetail(JsonNode item) {
@@ -245,8 +230,8 @@ public class MailQueueService {
             String requestId,
             String systemId,
             LocalDateTime generatedAt,
-            DSystem dSystem,
-            boolean isSafe
+            ReportStats reportStats,
+            List<IssueGroup> issueGroups
     ) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
@@ -256,7 +241,7 @@ public class MailQueueService {
         String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".html";
         Path filePath = resolvedQueueDir.resolve(fileName);
 
-        String html = buildHtmlPayload(dSystem, isSafe, generatedAt);
+        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt);
         Files.writeString(filePath, html, StandardCharsets.UTF_8);
         return filePath;
     }
@@ -269,23 +254,12 @@ public class MailQueueService {
         return Path.of(System.getProperty("user.dir")).resolve(dirPath).normalize();
     }
 
-    private String buildHtmlPayload(DSystem dSystem, boolean isSafe, LocalDateTime generatedAt) {
-        String customerName = escapeHtml(dSystem.getCustomerName());
-        String systemName = escapeHtml(dSystem.getSystemNameMin());
-        if (systemName.isBlank()) {
-            systemName = escapeHtml(dSystem.getSystemName());
-        }
-        String statusText = isSafe ? "정상" : "비정상";
-        String statusClass = isSafe ? "ok" : "ng";
-
-        String tbody = """
-                    <tr>
-                      <td>1</td>
-                      <td class="left">%s</td>
-                      <td class="left">%s</td>
-                      <td class="%s">%s</td>
-                    </tr>
-                """.formatted(customerName, systemName, statusClass, statusText);
+    private String buildHtmlPayload(
+            ReportStats reportStats,
+            List<IssueGroup> issueGroups,
+            LocalDateTime generatedAt
+    ) {
+        String issueRows = buildIssueRows(issueGroups);
 
         return """
                 <!doctype html>
@@ -303,7 +277,16 @@ public class MailQueueService {
                     }
                     h1 {
                       margin: 0 0 8px;
-                      font-size: 22px;
+                      font-size: 24px;
+                    }
+                    h2 {
+                      margin: 28px 0 10px;
+                      padding: 12px 16px;
+                      color: #fff;
+                      background: #5d76c3;
+                      border: 1px solid #2e3d6f;
+                      font-size: 20px;
+                      text-align: center;
                     }
                     .meta {
                       margin-bottom: 16px;
@@ -316,40 +299,68 @@ public class MailQueueService {
                       table-layout: fixed;
                     }
                     th, td {
-                      border: 1px solid #d9d9d9;
-                      padding: 10px 8px;
+                      border: 1px solid #555;
+                      padding: 12px 10px;
                       text-align: center;
                       font-size: 14px;
                       word-break: keep-all;
+                      vertical-align: middle;
                     }
                     th {
-                      background: #f5f7fa;
+                      background: #aaa;
+                      color: #fff;
                       font-weight: 700;
                     }
                     td.left {
                       text-align: left;
+                      word-break: break-word;
                     }
-                    .ok {
+                    .normal {
                       color: #137333;
                       font-weight: 700;
                     }
-                    .ng {
+                    .warning {
+                      color: #b26a00;
+                      font-weight: 700;
+                    }
+                    .danger {
                       color: #b42318;
                       font-weight: 700;
+                    }
+                    .empty {
+                      color: #777;
                     }
                   </style>
                 </head>
                 <body>
-                  <h1>시스템 점검 상태</h1>
+                  <h1>메일 내용</h1>
                   <div class="meta">생성시각: %s</div>
-                
+
+                  <h2>통계</h2>
                   <table>
                     <thead>
                       <tr>
-                        <th style="width:70px;">번호</th>
-                        <th>고객명</th>
-                        <th>시스템명</th>
-                        <th style="width:120px;">점검 상태</th>
+                        <th>정상(건)</th>
+                        <th>경고</th>
+                        <th>위험</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="normal">%d</td>
+                        <td class="warning">%d</td>
+                        <td class="danger">%d</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <h2>이슈</h2>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width:20%%;">고객사</th>
+                        <th style="width:20%%;">시스템명</th>
+                        <th>이슈내용</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -357,7 +368,130 @@ public class MailQueueService {
                   </table>
                 </body>
                 </html>
-                """.formatted(HTML_TIME_FORMAT.format(generatedAt), tbody);
+                """.formatted(
+                HTML_TIME_FORMAT.format(generatedAt),
+                reportStats.normalCount(),
+                reportStats.warningCount(),
+                reportStats.dangerCount(),
+                issueRows
+        );
+    }
+
+    private String buildIssueRows(List<IssueGroup> issueGroups) {
+        if (issueGroups.isEmpty()) {
+            return """
+                      <tr>
+                        <td class="empty" colspan="3">경고 또는 위험 이슈가 없습니다.</td>
+                      </tr>
+                """;
+        }
+
+        StringBuilder rows = new StringBuilder();
+        for (IssueGroup issueGroup : issueGroups) {
+            rows.append("""
+                    <tr>
+                      <td class="left">%s</td>
+                      <td class="left">%s</td>
+                      <td class="left">%s</td>
+                    </tr>
+                    """.formatted(
+                    escapeHtml(issueGroup.customerName()),
+                    escapeHtml(issueGroup.systemName()),
+                    escapeHtmlWithLineBreaks(issueGroup.issueContent())
+            ));
+        }
+        return rows.toString();
+    }
+
+    private ReportStats calculateReportStats(List<Issue> issues) {
+        if (issues.isEmpty()) {
+            return new ReportStats(1, 0, 0);
+        }
+
+        int normalCount = 0;
+        int warningCount = 0;
+        int dangerCount = 0;
+        for (Issue issue : issues) {
+            IssueLevel level = classifyIssueLevel(issue);
+            if (level == IssueLevel.DANGER) {
+                dangerCount++;
+            } else if (level == IssueLevel.WARNING) {
+                warningCount++;
+            } else {
+                normalCount++;
+            }
+        }
+        return new ReportStats(normalCount, warningCount, dangerCount);
+    }
+
+    private List<IssueGroup> buildIssueGroups(DSystem dSystem, List<Issue> issues) {
+        List<Issue> notableIssues = issues.stream()
+                .filter(issue -> {
+                    IssueLevel level = classifyIssueLevel(issue);
+                    return level == IssueLevel.WARNING || level == IssueLevel.DANGER;
+                })
+                .toList();
+        if (notableIssues.isEmpty()) {
+            return List.of();
+        }
+
+        String customerName = dSystem.getCustomerName();
+        String systemName = getDisplaySystemName(dSystem);
+        Long infoId = notableIssues.get(0).getInfoId();
+        StringBuilder issueContent = new StringBuilder();
+        for (Issue issue : notableIssues) {
+            if (issueContent.length() > 0) {
+                issueContent.append("\n");
+            }
+            issueContent.append(formatIssueContent(issue));
+        }
+        return List.of(new IssueGroup(infoId, customerName, systemName, issueContent.toString()));
+    }
+
+    private String formatIssueContent(Issue issue) {
+        String type = issue.getType() == null || issue.getType().isBlank() ? "UNKNOWN" : issue.getType().trim();
+        String value = issue.getValue() == null || issue.getValue().isBlank() ? "UNKNOWN" : issue.getValue().trim();
+        String detail = issue.getDetail() == null || issue.getDetail().isBlank() ? "" : issue.getDetail().trim();
+        if (detail.isBlank()) {
+            return "[%s] %s".formatted(value, type);
+        }
+        return "[%s] %s - %s".formatted(value, type, detail);
+    }
+
+    private IssueLevel classifyIssueLevel(Issue issue) {
+        String value = issue == null ? "" : issue.getValue();
+        if (value == null || value.isBlank()) {
+            return IssueLevel.WARNING;
+        }
+
+        String normalized = value.trim().toUpperCase();
+        if (normalized.equals("INFO")
+                || normalized.equals("OK")
+                || normalized.equals("NORMAL")
+                || normalized.equals("정상")) {
+            return IssueLevel.NORMAL;
+        }
+        if (normalized.equals("WARN")
+                || normalized.equals("WARNING")
+                || normalized.equals("경고")) {
+            return IssueLevel.WARNING;
+        }
+        if (normalized.equals("DANGER")
+                || normalized.equals("ERROR")
+                || normalized.equals("CRITICAL")
+                || normalized.equals("FATAL")
+                || normalized.equals("위험")) {
+            return IssueLevel.DANGER;
+        }
+        return IssueLevel.WARNING;
+    }
+
+    private String getDisplaySystemName(DSystem dSystem) {
+        String systemName = dSystem.getSystemNameMin();
+        if (systemName == null || systemName.isBlank()) {
+            systemName = dSystem.getSystemName();
+        }
+        return systemName == null ? "" : systemName;
     }
 
     private String escapeHtml(String value) {
@@ -370,6 +504,10 @@ public class MailQueueService {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&#39;");
+    }
+
+    private String escapeHtmlWithLineBreaks(String value) {
+        return escapeHtml(value).replace("\n", "<br />");
     }
 
     private String sanitizeSystemId(String systemId) {
@@ -400,7 +538,29 @@ public class MailQueueService {
 
     private record SavedReport(
             JsonNode reportJson,
-            Info info
+            Info info,
+            List<Issue> issues
     ) {
+    }
+
+    private record ReportStats(
+            int normalCount,
+            int warningCount,
+            int dangerCount
+    ) {
+    }
+
+    private record IssueGroup(
+            Long infoId,
+            String customerName,
+            String systemName,
+            String issueContent
+    ) {
+    }
+
+    private enum IssueLevel {
+        NORMAL,
+        WARNING,
+        DANGER
     }
 }
