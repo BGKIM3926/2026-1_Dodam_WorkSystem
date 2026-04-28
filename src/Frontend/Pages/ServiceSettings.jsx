@@ -16,9 +16,9 @@ import {
     Table,
     TableBody,
     TableCell,
+    TableContainer,
     TableHead,
     TableRow,
-    TableContainer,
     Typography,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
@@ -394,7 +394,7 @@ export default function ServiceSettings() {
                             시스템 버전 설정
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            체크한 시스템은 구버전으로 분류되어 고객 정보 데이터 그리드에서 제외됩니다.
+                            체크한 시스템은 구버전으로 분류됩니다.
                         </Typography>
 
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2, alignItems: { xs: 'stretch', sm: 'center' } }}>
