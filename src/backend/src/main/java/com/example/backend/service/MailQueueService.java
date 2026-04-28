@@ -287,7 +287,7 @@ public class MailQueueService {
                       padding: 0;
                       color: #333;
                       background: #f3f5f8;
-                      -webkit-text-size-adjust: 100%;
+                      -webkit-text-size-adjust: 100%%;
                     }
                     .wrap {
                       max-width: 595px;
