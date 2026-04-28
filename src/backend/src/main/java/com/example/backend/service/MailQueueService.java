@@ -269,29 +269,59 @@ public class MailQueueService {
                   <meta name="viewport" content="width=device-width, initial-scale=1" />
                   <title>점검 상태 보고서</title>
                   <style>
+                    .mail-font {
+                      font-family: "NanumGothic", "Malgun Gothic", "Apple SD Gothic Neo", Dotum, Helvetica, sans-serif;
+                    }
                     body {
-                      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-                      margin: 24px;
-                      color: #222;
+                      margin: 0;
+                      padding: 0;
+                      color: #333;
+                      background: #f3f5f8;
+                      -webkit-text-size-adjust: 100%;
+                    }
+                    .wrap {
+                      max-width: 595px;
+                      margin: 0 auto;
                       background: #fff;
                     }
-                    h1 {
-                      margin: 0 0 8px;
-                      font-size: 24px;
+                    .inner {
+                      padding: 56px 21px 44px;
                     }
-                    h2 {
-                      margin: 28px 0 10px;
-                      padding: 12px 16px;
-                      color: #fff;
-                      background: #5d76c3;
-                      border: 1px solid #2e3d6f;
-                      font-size: 20px;
-                      text-align: center;
+                    .title {
+                      margin: 0;
+                      color: #424240;
+                      font-size: 28px;
+                      line-height: 34px;
+                      font-weight: 700;
+                    }
+                    .title span {
+                      color: #2f6fed;
                     }
                     .meta {
-                      margin-bottom: 16px;
-                      color: #666;
+                      margin: 14px 0 0;
+                      color: #696969;
                       font-size: 13px;
+                      line-height: 20px;
+                    }
+                    .top-line {
+                      height: 1px;
+                      margin: 26px 0 0;
+                      background: #e5e5e5;
+                    }
+                    .section {
+                      margin-top: 42px;
+                    }
+                    .section-title {
+                      height: 24px;
+                      color: #000;
+                      font-size: 14px;
+                      line-height: 24px;
+                      font-weight: 700;
+                    }
+                    .section-line {
+                      height: 2px;
+                      margin-top: 0;
+                      background: #424240;
                     }
                     table {
                       width: 100%%;
@@ -299,16 +329,19 @@ public class MailQueueService {
                       table-layout: fixed;
                     }
                     th, td {
-                      border: 1px solid #555;
-                      padding: 12px 10px;
+                      padding: 15px 10px;
+                      border: 0;
+                      border-bottom: 1px dotted #e6e6e6;
                       text-align: center;
                       font-size: 14px;
+                      line-height: 22px;
                       word-break: keep-all;
                       vertical-align: middle;
                     }
                     th {
-                      background: #aaa;
-                      color: #fff;
+                      padding-top: 18px;
+                      color: #696969;
+                      background: #fff;
                       font-weight: 700;
                     }
                     td.left {
@@ -330,42 +363,70 @@ public class MailQueueService {
                     .empty {
                       color: #777;
                     }
+                    .stat-value {
+                      font-family: Helvetica, sans-serif;
+                      font-size: 30px;
+                      line-height: 34px;
+                      font-weight: 700;
+                    }
+                    .footer {
+                      margin-top: 34px;
+                      padding: 18px 21px;
+                      color: #696969;
+                      background: #e5e5e5;
+                      font-size: 12px;
+                      line-height: 17px;
+                    }
                   </style>
                 </head>
-                <body>
-                  <h1>메일 내용</h1>
-                  <div class="meta">생성시각: %s</div>
+                <body class="mail-font">
+                  <div class="wrap">
+                    <div class="inner">
+                      <h1 class="title">시스템 <span>점검 상태 보고서</span></h1>
+                      <div class="meta">생성시각: %s</div>
+                      <div class="top-line"></div>
 
-                  <h2>통계</h2>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>정상(건)</th>
-                        <th>경고</th>
-                        <th>위험</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="normal">%d</td>
-                        <td class="warning">%d</td>
-                        <td class="danger">%d</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      <div class="section">
+                        <div class="section-title">통계</div>
+                        <div class="section-line"></div>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>정상(건)</th>
+                              <th>경고</th>
+                              <th>위험</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td><span class="stat-value normal">%d</span></td>
+                              <td><span class="stat-value warning">%d</span></td>
+                              <td><span class="stat-value danger">%d</span></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
 
-                  <h2>이슈</h2>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style="width:20%%;">고객사</th>
-                        <th style="width:20%%;">시스템명</th>
-                        <th>이슈내용</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                %s    </tbody>
-                  </table>
+                      <div class="section">
+                        <div class="section-title">이슈</div>
+                        <div class="section-line"></div>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th style="width:20%%;">고객사</th>
+                              <th style="width:20%%;">시스템명</th>
+                              <th>이슈내용</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                %s        </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="footer">
+                      본 메일은 시스템 점검 결과를 바탕으로 자동 생성되었습니다.
+                    </div>
+                  </div>
                 </body>
                 </html>
                 """.formatted(
@@ -408,20 +469,24 @@ public class MailQueueService {
             return new ReportStats(1, 0, 0);
         }
 
-        int normalCount = 0;
-        int warningCount = 0;
-        int dangerCount = 0;
+        IssueLevel systemLevel = IssueLevel.NORMAL;
         for (Issue issue : issues) {
             IssueLevel level = classifyIssueLevel(issue);
             if (level == IssueLevel.DANGER) {
-                dangerCount++;
+                systemLevel = IssueLevel.DANGER;
+                break;
             } else if (level == IssueLevel.WARNING) {
-                warningCount++;
-            } else {
-                normalCount++;
+                systemLevel = IssueLevel.WARNING;
             }
         }
-        return new ReportStats(normalCount, warningCount, dangerCount);
+
+        if (systemLevel == IssueLevel.DANGER) {
+            return new ReportStats(0, 0, 1);
+        }
+        if (systemLevel == IssueLevel.WARNING) {
+            return new ReportStats(0, 1, 0);
+        }
+        return new ReportStats(1, 0, 0);
     }
 
     private List<IssueGroup> buildIssueGroups(DSystem dSystem, List<Issue> issues) {
