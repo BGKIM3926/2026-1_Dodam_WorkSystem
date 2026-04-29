@@ -5,8 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +37,9 @@ public class MailQueueService {
 
     private static final int MAX_SYSTEM_ID_LENGTH = 100;
     private static final int MAX_BODY_LENGTH = 65535;
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS");
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter HTML_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final Pattern BARE_DASH_JSON_VALUE_PATTERN =
@@ -73,7 +73,7 @@ public class MailQueueService {
         validate(request);
 
         String requestId = UUID.randomUUID().toString();
-        LocalDateTime receivedAt = LocalDateTime.now();
+        LocalDateTime receivedAt = nowInKorea();
         String systemIdText = request.getSystemId().trim();
         Long dsystemId = parseDSystemId(systemIdText);
         DSystem dSystem = findDSystemOrThrow(dsystemId);
@@ -85,8 +85,6 @@ public class MailQueueService {
 
         try {
             writeQueueHtmlFile(
-                    requestId,
-                    systemIdText,
                     receivedAt,
                     recipientEmail,
                     reportStats,
@@ -234,8 +232,6 @@ public class MailQueueService {
     }
 
     private Path writeQueueHtmlFile(
-            String requestId,
-            String systemId,
             LocalDateTime generatedAt,
             String recipientEmail,
             ReportStats reportStats,
@@ -244,14 +240,25 @@ public class MailQueueService {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
 
-        OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
-        String safeSystemId = sanitizeSystemId(systemId);
-        String fileName = FILE_TIME_FORMAT.format(nowUtc) + "-" + safeSystemId + "-" + requestId + ".html";
-        Path filePath = resolvedQueueDir.resolve(fileName);
+        Path filePath = resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
         String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, recipientEmail);
         Files.writeString(filePath, html, StandardCharsets.UTF_8);
         return filePath;
+    }
+
+    private LocalDateTime nowInKorea() {
+        return LocalDateTime.now(KOREA_ZONE);
+    }
+
+    private Path resolveQueueFilePath(Path queueDir, LocalDateTime generatedAt) {
+        LocalDateTime candidateTime = generatedAt;
+        Path candidatePath;
+        do {
+            candidatePath = queueDir.resolve(FILE_TIME_FORMAT.format(candidateTime) + ".html");
+            candidateTime = candidateTime.plusSeconds(1);
+        } while (Files.exists(candidatePath));
+        return candidatePath;
     }
 
     private Path resolveQueueDirectory() {
@@ -536,11 +543,6 @@ public class MailQueueService {
             return Optional.empty();
         }
         return parseSystemId(value.asString());
-    }
-
-    private String sanitizeSystemId(String systemId) {
-        String safe = systemId.replaceAll("[^a-zA-Z0-9_-]", "_");
-        return safe.isBlank() ? "unknown" : safe;
     }
 
     private DSystem findDSystemOrThrow(Long systemId) {
