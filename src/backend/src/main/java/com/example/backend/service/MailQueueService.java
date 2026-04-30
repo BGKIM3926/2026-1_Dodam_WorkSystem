@@ -70,6 +70,15 @@ public class MailQueueService {
 
     @Transactional
     public MailResponseDto enqueue(MailRequestDto request, String clientIp) {
+        return enqueue(request, clientIp, false);
+    }
+
+    @Transactional
+    public MailResponseDto enqueueEmergency(MailRequestDto request, String clientIp) {
+        return enqueue(request, clientIp, true);
+    }
+
+    private MailResponseDto enqueue(MailRequestDto request, String clientIp, boolean emergency) {
         validate(request);
 
         String requestId = UUID.randomUUID().toString();
@@ -88,7 +97,8 @@ public class MailQueueService {
                     receivedAt,
                     recipientEmail,
                     reportStats,
-                    issueGroups
+                    issueGroups,
+                    emergency
             );
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
@@ -235,12 +245,15 @@ public class MailQueueService {
             LocalDateTime generatedAt,
             String recipientEmail,
             ReportStats reportStats,
-            List<IssueGroup> issueGroups
+            List<IssueGroup> issueGroups,
+            boolean emergency
     ) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
 
-        Path filePath = resolveQueueFilePath(resolvedQueueDir, generatedAt);
+        Path filePath = emergency
+                ? resolveEmergencyQueueFilePath(resolvedQueueDir, generatedAt)
+                : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
         String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, recipientEmail);
         Files.writeString(filePath, html, StandardCharsets.UTF_8);
@@ -259,6 +272,11 @@ public class MailQueueService {
             candidateTime = candidateTime.plusSeconds(1);
         } while (Files.exists(candidatePath));
         return candidatePath;
+    }
+
+    private Path resolveEmergencyQueueFilePath(Path queueDir, LocalDateTime generatedAt) {
+        return queueDir.resolve(DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss").format(generatedAt)
+                + "-EMERGENCY.html");
     }
 
     private Path resolveQueueDirectory() {
