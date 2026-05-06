@@ -4,9 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.example.backend.entity.converter.EmailEncryptConverter;
 
 @Entity
 @Table(name = "users")
@@ -24,7 +22,6 @@ public class User {
     private String name;
 
     @Column(name = "email", length = 512)
-    @Convert(converter = EmailEncryptConverter.class)
     private String email;
 
     @Column(name = "role")
