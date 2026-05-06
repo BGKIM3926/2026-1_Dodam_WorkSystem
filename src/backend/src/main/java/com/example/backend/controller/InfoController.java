@@ -21,13 +21,13 @@ import tools.jackson.databind.ObjectMapper;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/mail")
-public class MailController {
+@RequestMapping("/api/info")
+public class InfoController {
 
     private final MailQueueService mailQueueService;
     private final ObjectMapper objectMapper;
 
-    public MailController(MailQueueService mailQueueService, ObjectMapper objectMapper) {
+    public InfoController(MailQueueService mailQueueService, ObjectMapper objectMapper) {
         this.mailQueueService = mailQueueService;
         this.objectMapper = objectMapper;
     }
@@ -46,7 +46,7 @@ public class MailController {
 
         MailRequestDto request = new MailRequestDto();
         request.setSystemId(readSystemId(payload));
-        request.setBody(readBody(payload));
+        request.setContent(readContent(payload));
         return request;
     }
 
@@ -61,15 +61,15 @@ public class MailController {
         return value.asString();
     }
 
-    private String readBody(JsonNode payload) {
-        JsonNode body = payload.get("body");
-        if (body == null || body.isNull()) {
-            return writeJson(payload);
+    private String readContent(JsonNode payload) {
+        JsonNode content = payload.get("content");
+        if (content == null || content.isNull()) {
+            return null;
         }
-        if (body.isString()) {
-            return body.asString();
+        if (content.isString()) {
+            return content.asString();
         }
-        return writeJson(body);
+        return writeJson(content);
     }
 
     private String writeJson(JsonNode node) {

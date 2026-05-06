@@ -21,13 +21,13 @@ import tools.jackson.databind.ObjectMapper;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/emergency")
-public class EmergencyMailController {
+@RequestMapping("/api/alert")
+public class AlertController {
 
     private final MailQueueService mailQueueService;
     private final ObjectMapper objectMapper;
 
-    public EmergencyMailController(MailQueueService mailQueueService, ObjectMapper objectMapper) {
+    public AlertController(MailQueueService mailQueueService, ObjectMapper objectMapper) {
         this.mailQueueService = mailQueueService;
         this.objectMapper = objectMapper;
     }
@@ -35,7 +35,7 @@ public class EmergencyMailController {
     @PostMapping
     public ResponseEntity<MailResponseDto> enqueue(@RequestBody JsonNode payload, HttpServletRequest servletRequest) {
         MailRequestDto request = toMailRequest(payload);
-        MailResponseDto response = mailQueueService.enqueueEmergency(request, servletRequest.getRemoteAddr());
+        MailResponseDto response = mailQueueService.enqueueAlert(request, servletRequest.getRemoteAddr());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
@@ -46,7 +46,7 @@ public class EmergencyMailController {
 
         MailRequestDto request = new MailRequestDto();
         request.setSystemId(readSystemId(payload));
-        request.setBody(readBody(payload));
+        request.setContent(readContent(payload));
         return request;
     }
 
@@ -61,15 +61,15 @@ public class EmergencyMailController {
         return value.asString();
     }
 
-    private String readBody(JsonNode payload) {
-        JsonNode body = payload.get("body");
-        if (body == null || body.isNull()) {
-            return writeJson(payload);
+    private String readContent(JsonNode payload) {
+        JsonNode content = payload.get("content");
+        if (content == null || content.isNull()) {
+            return null;
         }
-        if (body.isString()) {
-            return body.asString();
+        if (content.isString()) {
+            return content.asString();
         }
-        return writeJson(body);
+        return writeJson(content);
     }
 
     private String writeJson(JsonNode node) {

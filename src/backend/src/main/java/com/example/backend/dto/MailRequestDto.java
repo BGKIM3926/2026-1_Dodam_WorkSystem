@@ -7,7 +7,7 @@ public class MailRequestDto {
     @JsonProperty("system_id")
     private String systemId;
 
-    private String body;
+    private String content;
 
     public String getSystemId() {
         return systemId;
@@ -17,11 +17,11 @@ public class MailRequestDto {
         this.systemId = systemId;
     }
 
-    public String getBody() {
-        return body;
+    public String getContent() {
+        return content;
     }
 
-    public void setBody(String body) {
-        this.body = body;
+    public void setContent(String content) {
+        this.content = content;
     }
 }

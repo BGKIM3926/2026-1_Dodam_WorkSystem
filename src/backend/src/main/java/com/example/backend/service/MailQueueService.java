@@ -74,11 +74,11 @@ public class MailQueueService {
     }
 
     @Transactional
-    public MailResponseDto enqueueEmergency(MailRequestDto request, String clientIp) {
+    public MailResponseDto enqueueAlert(MailRequestDto request, String clientIp) {
         return enqueue(request, clientIp, true);
     }
 
-    private MailResponseDto enqueue(MailRequestDto request, String clientIp, boolean emergency) {
+    private MailResponseDto enqueue(MailRequestDto request, String clientIp, boolean alert) {
         validate(request);
 
         String requestId = UUID.randomUUID().toString();
@@ -98,7 +98,7 @@ public class MailQueueService {
                     recipientEmail,
                     reportStats,
                     issueGroups,
-                    emergency
+                    alert
             );
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
@@ -107,7 +107,7 @@ public class MailQueueService {
     }
 
     private SavedReport saveInfoAndIssues(MailRequestDto request, LocalDateTime receivedAt) {
-        JsonNode reportJson = readReportJsonOrNull(request.getBody());
+        JsonNode reportJson = readReportJsonOrNull(request.getContent());
         String bodyRawJson = reportJson == null
                 ? createFallbackBodyJson(request, receivedAt)
                 : writeJson(reportJson);
@@ -205,7 +205,7 @@ public class MailQueueService {
             return objectMapper.writeValueAsString(Map.of(
                     "system_id", request.getSystemId(),
                     "received_at", HTML_TIME_FORMAT.format(receivedAt),
-                    "body", request.getBody()
+                    "content", request.getContent()
             ));
         } catch (Exception e) {
             throw new IllegalStateException("info 원본 JSON 생성에 실패했습니다.");
@@ -227,14 +227,14 @@ public class MailQueueService {
         if (request.getSystemId() == null || request.getSystemId().isBlank()) {
             throw new IllegalArgumentException("system_id는 필수입니다.");
         }
-        if (request.getBody() == null || request.getBody().isBlank()) {
-            throw new IllegalArgumentException("body는 필수입니다.");
+        if (request.getContent() == null || request.getContent().isBlank()) {
+            throw new IllegalArgumentException("content는 필수입니다.");
         }
         if (request.getSystemId().trim().length() > MAX_SYSTEM_ID_LENGTH) {
             throw new IllegalArgumentException("system_id는 100자 이하여야 합니다.");
         }
-        if (request.getBody().length() > MAX_BODY_LENGTH) {
-            throw new IllegalArgumentException("body는 65535자 이하여야 합니다.");
+        if (request.getContent().length() > MAX_BODY_LENGTH) {
+            throw new IllegalArgumentException("content는 65535자 이하여야 합니다.");
         }
         if (parseSystemId(request.getSystemId().trim()).isEmpty()) {
             throw new IllegalArgumentException("system_id는 숫자여야 합니다.");
@@ -246,13 +246,13 @@ public class MailQueueService {
             String recipientEmail,
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
-            boolean emergency
+            boolean alert
     ) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
 
-        Path filePath = emergency
-                ? resolveEmergencyQueueFilePath(resolvedQueueDir, generatedAt)
+        Path filePath = alert
+                ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt)
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
         String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, recipientEmail);
@@ -274,9 +274,14 @@ public class MailQueueService {
         return candidatePath;
     }
 
-    private Path resolveEmergencyQueueFilePath(Path queueDir, LocalDateTime generatedAt) {
-        return queueDir.resolve(DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss").format(generatedAt)
-                + "-EMERGENCY.html");
+    private Path resolveAlertQueueFilePath(Path queueDir, LocalDateTime generatedAt) {
+        LocalDateTime candidateTime = generatedAt;
+        Path candidatePath;
+        do {
+            candidatePath = queueDir.resolve(FILE_TIME_FORMAT.format(candidateTime) + "-ALERT.html");
+            candidateTime = candidateTime.plusSeconds(1);
+        } while (Files.exists(candidatePath));
+        return candidatePath;
     }
 
     private Path resolveQueueDirectory() {
