@@ -8,6 +8,7 @@ curl -fsS -X POST "$API_URL" \
   --data-binary @- <<'JSON'
 {
   "system_id": "1",
+  "key": null,
   "content": {
     "report_type": "hardware",
     "health_flags": [

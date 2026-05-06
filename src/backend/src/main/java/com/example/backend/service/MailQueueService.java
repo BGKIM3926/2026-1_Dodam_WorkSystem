@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,9 +109,7 @@ public class MailQueueService {
 
     private SavedReport saveInfoAndIssues(MailRequestDto request, LocalDateTime receivedAt) {
         JsonNode reportJson = readReportJsonOrNull(request.getContent());
-        String bodyRawJson = reportJson == null
-                ? createFallbackBodyJson(request, receivedAt)
-                : writeJson(reportJson);
+        String bodyRawJson = createBodyRawJson(request, receivedAt, reportJson);
 
         Info info = new Info();
         info.setBodyRawJson(bodyRawJson);
@@ -200,13 +199,14 @@ public class MailQueueService {
         return BARE_DASH_JSON_VALUE_PATTERN.matcher(body).replaceAll("$1null$2");
     }
 
-    private String createFallbackBodyJson(MailRequestDto request, LocalDateTime receivedAt) {
+    private String createBodyRawJson(MailRequestDto request, LocalDateTime receivedAt, JsonNode reportJson) {
         try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "system_id", request.getSystemId(),
-                    "received_at", HTML_TIME_FORMAT.format(receivedAt),
-                    "content", request.getContent()
-            ));
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("system_id", request.getSystemId());
+            body.put("key", request.getKey());
+            body.put("content", reportJson == null ? request.getContent() : reportJson);
+            body.put("received_at", HTML_TIME_FORMAT.format(receivedAt));
+            return objectMapper.writeValueAsString(body);
         } catch (Exception e) {
             throw new IllegalStateException("info 원본 JSON 생성에 실패했습니다.");
         }

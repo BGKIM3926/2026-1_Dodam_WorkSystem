@@ -46,6 +46,7 @@ public class InfoController {
 
         MailRequestDto request = new MailRequestDto();
         request.setSystemId(readSystemId(payload));
+        request.setKey(readKey(payload));
         request.setContent(readContent(payload));
         return request;
     }
@@ -55,6 +56,14 @@ public class InfoController {
         if (value == null || value.isNull()) {
             value = payload.get("systemId");
         }
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        return value.asString();
+    }
+
+    private String readKey(JsonNode payload) {
+        JsonNode value = payload.get("key");
         if (value == null || value.isNull()) {
             return null;
         }
