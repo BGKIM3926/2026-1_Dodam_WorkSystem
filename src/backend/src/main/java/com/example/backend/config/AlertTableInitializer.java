@@ -20,8 +20,10 @@ public class AlertTableInitializer {
             CREATE TABLE IF NOT EXISTS alert (
                 id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 body_raw_json LONGTEXT NOT NULL,
-                time DATETIME(6) NOT NULL
+                time DATETIME NOT NULL
             )
             """);
+
+        jdbcTemplate.execute("ALTER TABLE alert MODIFY COLUMN time DATETIME NOT NULL");
     }
 }

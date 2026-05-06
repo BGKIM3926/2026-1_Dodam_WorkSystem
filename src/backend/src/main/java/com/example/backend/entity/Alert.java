@@ -23,7 +23,7 @@ public class Alert {
     @Column(name = "body_raw_json", nullable = false)
     private String bodyRawJson;
 
-    @Column(name = "time", nullable = false)
+    @Column(name = "time", nullable = false, columnDefinition = "DATETIME")
     private LocalDateTime time;
 
     public Long getId() {
