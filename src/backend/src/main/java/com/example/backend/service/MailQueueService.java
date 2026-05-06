@@ -21,10 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.backend.dto.MailRequestDto;
 import com.example.backend.dto.MailResponseDto;
+import com.example.backend.entity.Alert;
 import com.example.backend.entity.DSystem;
 import com.example.backend.entity.Info;
 import com.example.backend.entity.Issue;
 import com.example.backend.entity.User;
+import com.example.backend.repository.AlertRepository;
 import com.example.backend.repository.DSystemRepository;
 import com.example.backend.repository.InfoRepository;
 import com.example.backend.repository.IssueRepository;
@@ -38,6 +40,7 @@ public class MailQueueService {
 
     private static final int MAX_SYSTEM_ID_LENGTH = 100;
     private static final int MAX_BODY_LENGTH = 65535;
+    private static final String MAIL_SUBJECT = "시스템 점검 결과 안내";
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -47,6 +50,7 @@ public class MailQueueService {
             Pattern.compile("(:\\s*)-(\\s*[,}\\]])");
 
     private final DSystemRepository dSystemRepository;
+    private final AlertRepository alertRepository;
     private final InfoRepository infoRepository;
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
@@ -57,12 +61,14 @@ public class MailQueueService {
 
     public MailQueueService(
             DSystemRepository dSystemRepository,
+            AlertRepository alertRepository,
             InfoRepository infoRepository,
             IssueRepository issueRepository,
             UserRepository userRepository,
             ObjectMapper objectMapper
     ) {
         this.dSystemRepository = dSystemRepository;
+        this.alertRepository = alertRepository;
         this.infoRepository = infoRepository;
         this.issueRepository = issueRepository;
         this.userRepository = userRepository;
@@ -88,15 +94,18 @@ public class MailQueueService {
         Long dsystemId = parseDSystemId(systemIdText);
         DSystem dSystem = findDSystemOrThrow(dsystemId);
 
-        SavedReport savedReport = saveInfoAndIssues(request, receivedAt);
+        SavedReport savedReport = saveReportAndIssues(request, receivedAt, alert);
         ReportStats reportStats = calculateReportStats(savedReport.issues());
-        String recipientEmail = findRecipientEmail(savedReport.info(), dsystemId);
+        String senderEmail = findSenderEmail(savedReport.bodyRawJson(), dsystemId);
+        String allUserEmails = findAllUserEmails();
         List<IssueGroup> issueGroups = buildIssueGroups(dSystem, savedReport.issues());
 
         try {
             writeQueueHtmlFile(
                     receivedAt,
-                    recipientEmail,
+                    senderEmail,
+                    allUserEmails,
+                    allUserEmails,
                     reportStats,
                     issueGroups,
                     alert
@@ -107,20 +116,33 @@ public class MailQueueService {
         }
     }
 
-    private SavedReport saveInfoAndIssues(MailRequestDto request, LocalDateTime receivedAt) {
+    private SavedReport saveReportAndIssues(MailRequestDto request, LocalDateTime receivedAt, boolean alert) {
         JsonNode reportJson = readReportJsonOrNull(request.getContent());
         String bodyRawJson = createBodyRawJson(request, receivedAt, reportJson);
 
-        Info info = new Info();
-        info.setBodyRawJson(bodyRawJson);
-        info.setTime(receivedAt);
-        Info savedInfo = infoRepository.save(info);
+        Long reportId = alert
+                ? saveAlert(bodyRawJson, receivedAt)
+                : saveInfo(bodyRawJson, receivedAt);
 
         List<Issue> savedIssues = reportJson == null
                 ? List.of()
-                : saveIssues(reportJson, savedInfo.getId());
+                : saveIssues(reportJson, reportId);
 
-        return new SavedReport(reportJson, savedInfo, savedIssues);
+        return new SavedReport(reportJson, bodyRawJson, savedIssues);
+    }
+
+    private Long saveInfo(String bodyRawJson, LocalDateTime receivedAt) {
+        Info info = new Info();
+        info.setBodyRawJson(bodyRawJson);
+        info.setTime(receivedAt);
+        return infoRepository.save(info).getId();
+    }
+
+    private Long saveAlert(String bodyRawJson, LocalDateTime receivedAt) {
+        Alert alert = new Alert();
+        alert.setBodyRawJson(bodyRawJson);
+        alert.setTime(receivedAt);
+        return alertRepository.save(alert).getId();
     }
 
     private List<Issue> saveIssues(JsonNode reportJson, Long infoId) {
@@ -243,7 +265,9 @@ public class MailQueueService {
 
     private Path writeQueueHtmlFile(
             LocalDateTime generatedAt,
-            String recipientEmail,
+            String senderEmail,
+            String toEmails,
+            String ccEmails,
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
             boolean alert
@@ -255,8 +279,9 @@ public class MailQueueService {
                 ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt)
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
-        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, recipientEmail);
-        Files.writeString(filePath, html, StandardCharsets.UTF_8);
+        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, senderEmail);
+        String queuePayload = buildQueuePayload(senderEmail, toEmails, ccEmails, html);
+        Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
         return filePath;
     }
 
@@ -296,10 +321,10 @@ public class MailQueueService {
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
             LocalDateTime generatedAt,
-            String recipientEmail
+            String senderEmail
     ) {
         String issueRows = buildIssueRows(issueGroups);
-        String recipientLine = buildRecipientLine(recipientEmail);
+        String senderLine = buildSenderLine(senderEmail);
 
         return """
                 <!doctype html>
@@ -373,7 +398,7 @@ public class MailQueueService {
                 </html>
                 """.formatted(
                 HTML_TIME_FORMAT.format(generatedAt),
-                recipientLine,
+                senderLine,
                 reportStats.normalCount(),
                 reportStats.warningCount(),
                 reportStats.dangerCount(),
@@ -381,15 +406,32 @@ public class MailQueueService {
         );
     }
 
-    private String buildRecipientLine(String recipientEmail) {
-        if (recipientEmail == null || recipientEmail.isBlank()) {
+    private String buildQueuePayload(String senderEmail, String toEmails, String ccEmails, String html) {
+        StringBuilder payload = new StringBuilder();
+        if (senderEmail != null && !senderEmail.isBlank()) {
+            payload.append("FROM=").append(senderEmail.trim()).append('\n');
+        }
+        payload.append("TO=").append(toEmails == null ? "" : toEmails).append('\n');
+        if (ccEmails != null && !ccEmails.isBlank()) {
+            payload.append("CC=").append(ccEmails).append('\n');
+        }
+        payload.append("SUBJECT=").append(MAIL_SUBJECT).append('\n');
+        payload.append("CONTENT_TYPE=html\n");
+        payload.append("CHARSET=UTF-8\n\n");
+        payload.append("__BODY__\n");
+        payload.append(html);
+        return payload.toString();
+    }
+
+    private String buildSenderLine(String senderEmail) {
+        if (senderEmail == null || senderEmail.isBlank()) {
             return "";
         }
         return """
                               <div style="margin:28px 0 0; padding:0; color:#424240; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
-                                발송할 주소 : %s
+                                발신자 : %s
                               </div>
-                """.formatted(escapeHtml(recipientEmail.trim()));
+                """.formatted(escapeHtml(senderEmail.trim()));
     }
 
     private String buildIssueRows(List<IssueGroup> issueGroups) {
@@ -529,8 +571,8 @@ public class MailQueueService {
         return escapeHtml(value).replace("\n", "<br />");
     }
 
-    private String findRecipientEmail(Info info, Long fallbackSystemId) {
-        Long dsystemId = readDSystemIdFromBodyRawJson(info.getBodyRawJson()).orElse(fallbackSystemId);
+    private String findSenderEmail(String bodyRawJson, Long fallbackSystemId) {
+        Long dsystemId = readDSystemIdFromBodyRawJson(bodyRawJson).orElse(fallbackSystemId);
         return dSystemRepository.findById(dsystemId)
                 .map(DSystem::getManager)
                 .map(String::trim)
@@ -539,6 +581,16 @@ public class MailQueueService {
                 .map(User::getEmail)
                 .map(String::trim)
                 .filter(email -> !email.isBlank())
+                .orElse("");
+    }
+
+    private String findAllUserEmails() {
+        return userRepository.findAll().stream()
+                .map(User::getEmail)
+                .map(email -> email == null ? "" : email.trim())
+                .filter(email -> !email.isBlank())
+                .distinct()
+                .reduce((left, right) -> left + ";" + right)
                 .orElse("");
     }
 
@@ -591,7 +643,7 @@ public class MailQueueService {
 
     private record SavedReport(
             JsonNode reportJson,
-            Info info,
+            String bodyRawJson,
             List<Issue> issues
     ) {
     }
