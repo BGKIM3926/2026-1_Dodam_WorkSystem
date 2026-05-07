@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -58,6 +59,9 @@ public class MailQueueService {
 
     @Value("${mail.queue-dir:mail-queue}")
     private String queueDir;
+
+    @Value("${mail.view-alert-base-url:}")
+    private String viewAlertBaseUrl;
 
     public MailQueueService(
             DSystemRepository dSystemRepository,
@@ -108,6 +112,7 @@ public class MailQueueService {
                     allUserEmails,
                     reportStats,
                     issueGroups,
+                    savedReport,
                     alert
             );
             return new MailResponseDto(requestId, "FILE_WRITTEN");
@@ -128,7 +133,7 @@ public class MailQueueService {
                 ? List.of()
                 : saveIssues(reportJson, reportId);
 
-        return new SavedReport(reportJson, bodyRawJson, savedIssues);
+        return new SavedReport(reportId, reportJson, bodyRawJson, savedIssues);
     }
 
     private Long saveInfo(String bodyRawJson, LocalDateTime receivedAt) {
@@ -270,6 +275,7 @@ public class MailQueueService {
             String ccEmails,
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
+            SavedReport savedReport,
             boolean alert
     ) throws IOException {
         Path resolvedQueueDir = resolveQueueDirectory();
@@ -279,7 +285,7 @@ public class MailQueueService {
                 ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt)
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
-        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, senderEmail);
+        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, senderEmail, savedReport, alert);
         String queuePayload = buildQueuePayload(senderEmail, toEmails, ccEmails, html);
         Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
         return filePath;
@@ -321,10 +327,15 @@ public class MailQueueService {
             ReportStats reportStats,
             List<IssueGroup> issueGroups,
             LocalDateTime generatedAt,
-            String senderEmail
+            String senderEmail,
+            SavedReport savedReport,
+            boolean alert
     ) {
         String issueRows = buildIssueRows(issueGroups);
         String senderLine = buildSenderLine(senderEmail);
+        String contentDetail = alert
+                ? buildContentDetailSection(readContentNode(savedReport))
+                : buildViewAlertLinkSection(savedReport.reportId());
 
         return """
                 <!doctype html>
@@ -383,6 +394,7 @@ public class MailQueueService {
                                   <th width="60%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈내용</th>
                                 </tr>
                 %s              </table>
+                %s
                             </td>
                           </tr>
                           <tr>
@@ -402,8 +414,182 @@ public class MailQueueService {
                 reportStats.normalCount(),
                 reportStats.warningCount(),
                 reportStats.dangerCount(),
-                issueRows
+                issueRows,
+                contentDetail
         );
+    }
+
+    @Transactional(readOnly = true)
+    public String buildInfoContentTablePage(Long infoId) {
+        if (infoId == null) {
+            throw new IllegalArgumentException("id는 필수입니다.");
+        }
+
+        Info info = infoRepository.findById(infoId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 info id입니다: " + infoId));
+        JsonNode content = readContentNode(info.getBodyRawJson());
+        return buildContentTablePage(content);
+    }
+
+    private JsonNode readContentNode(SavedReport savedReport) {
+        if (savedReport == null) {
+            return null;
+        }
+        JsonNode reportJson = savedReport.reportJson();
+        if (reportJson != null) {
+            return reportJson;
+        }
+        return readContentNode(savedReport.bodyRawJson());
+    }
+
+    private JsonNode readContentNode(String bodyRawJson) {
+        if (bodyRawJson == null || bodyRawJson.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(bodyRawJson);
+            JsonNode content = root.get("content");
+            if (content == null || content.isNull()) {
+                return null;
+            }
+            if (content.isString()) {
+                return readReportJsonOrNull(content.asString());
+            }
+            return content;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String buildViewAlertLinkSection(Long infoId) {
+        String href = buildViewAlertHref(infoId);
+        return """
+                              <div style="height:30px; line-height:30px; font-size:30px;">&nbsp;</div>
+                              <div style="margin:0; padding:0; color:#333; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                <a href="%s" target="_blank" rel="noopener noreferrer" style="color:#2f6fed; text-decoration:underline; font-weight:700;">자세히 보기</a>
+                              </div>
+                """.formatted(escapeHtmlAttribute(href));
+    }
+
+    private String buildViewAlertHref(Long infoId) {
+        String path = "/api/view_alert?id=" + infoId;
+        if (viewAlertBaseUrl == null || viewAlertBaseUrl.isBlank()) {
+            return path;
+        }
+        String baseUrl = viewAlertBaseUrl.trim();
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+        return baseUrl + path;
+    }
+
+    private String buildContentDetailSection(JsonNode content) {
+        return """
+                              <div style="height:42px; line-height:42px; font-size:42px;">&nbsp;</div>
+                              <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                상세 내용
+                              </div>
+                              <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
+                %s
+                """.formatted(buildContentTable(content));
+    }
+
+    private String buildContentTablePage(JsonNode content) {
+        return """
+                <!doctype html>
+                <html lang="ko">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>상세 내용</title>
+                </head>
+                <body style="margin:0; padding:32px 16px; background:#ffffff; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif; -webkit-text-size-adjust:100%%;">
+                  <div style="max-width:820px; margin:0 auto;">
+                    <div style="margin:0 0 16px; color:#424240; font-size:24px; line-height:32px; font-weight:700;">상세 내용</div>
+                    <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
+                %s
+                  </div>
+                </body>
+                </html>
+                """.formatted(buildContentTable(content));
+    }
+
+    private String buildContentTable(JsonNode content) {
+        List<ContentRow> rows = new ArrayList<>();
+        collectContentRows("", content, rows);
+        if (rows.isEmpty()) {
+            return """
+                              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
+                                <tr>
+                                  <td style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#777; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">표시할 상세 내용이 없습니다.</td>
+                                </tr>
+                              </table>
+                """;
+        }
+
+        StringBuilder table = new StringBuilder("""
+                              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
+                                <tr>
+                                  <th width="34%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">항목</th>
+                                  <th width="66%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">내용</th>
+                                </tr>
+                """);
+        for (ContentRow row : rows) {
+            table.append("""
+                                <tr>
+                                  <td width="34%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:top; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="66%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:top; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                </tr>
+                    """.formatted(escapeHtml(row.key()), escapeHtmlWithLineBreaks(row.value())));
+        }
+        table.append("""
+                              </table>
+                """);
+        return table.toString();
+    }
+
+    private void collectContentRows(String prefix, JsonNode node, List<ContentRow> rows) {
+        if (node == null || node.isNull()) {
+            if (!prefix.isBlank()) {
+                rows.add(new ContentRow(prefix, ""));
+            }
+            return;
+        }
+        if (node.isObject()) {
+            for (Entry<String, JsonNode> property : node.properties()) {
+                String key = prefix.isBlank() ? property.getKey() : prefix + "." + property.getKey();
+                collectContentRows(key, property.getValue(), rows);
+            }
+            return;
+        }
+        if (node.isArray()) {
+            for (int index = 0; index < node.size(); index++) {
+                JsonNode item = node.get(index);
+                String key = prefix.isBlank() && item != null && item.isObject()
+                        ? ""
+                        : prefix.isBlank() ? String.valueOf(index) : prefix + "[" + index + "]";
+                collectContentRows(key, item, rows);
+            }
+            return;
+        }
+        rows.add(new ContentRow(prefix.isBlank() ? "content" : prefix, readContentValue(node)));
+    }
+
+    private String readContentValue(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return "";
+        }
+        if (node.isString()) {
+            return node.asString();
+        }
+        if (node.isNumber()) {
+            Number number = node.numberValue();
+            return number == null ? "" : number.toString();
+        }
+        if (node.isBoolean()) {
+            return String.valueOf(node.booleanValue());
+        }
+        return writeJson(node);
     }
 
     private String buildQueuePayload(String senderEmail, String toEmails, String ccEmails, String html) {
@@ -567,6 +753,10 @@ public class MailQueueService {
                 .replace("'", "&#39;");
     }
 
+    private String escapeHtmlAttribute(String value) {
+        return escapeHtml(value);
+    }
+
     private String escapeHtmlWithLineBreaks(String value) {
         return escapeHtml(value).replace("\n", "<br />");
     }
@@ -642,9 +832,16 @@ public class MailQueueService {
     }
 
     private record SavedReport(
+            Long reportId,
             JsonNode reportJson,
             String bodyRawJson,
             List<Issue> issues
+    ) {
+    }
+
+    private record ContentRow(
+            String key,
+            String value
     ) {
     }
 
