@@ -27,7 +27,7 @@ public class ViewAlertController {
 
     @GetMapping(produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> viewAlert(@RequestParam("id") Long id) {
-        String html = mailQueueService.buildInfoContentTablePage(id);
+        String html = mailQueueService.buildViewAlertPage(id);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/html; charset=UTF-8"))
                 .body(html);

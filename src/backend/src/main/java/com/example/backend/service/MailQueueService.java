@@ -42,6 +42,8 @@ public class MailQueueService {
     private static final int MAX_SYSTEM_ID_LENGTH = 100;
     private static final int MAX_BODY_LENGTH = 65535;
     private static final String MAIL_SUBJECT = "시스템 점검 결과 안내";
+    private static final String FIXED_TO_EMAILS = "enek4444@naver.com;kjh@dodamsol.kro.kr";
+    private static final String VIEW_ALERT_BASE_URL = "http://dodam.tplinkdns.com:28080";
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
@@ -59,9 +61,6 @@ public class MailQueueService {
 
     @Value("${mail.queue-dir:mail-queue}")
     private String queueDir;
-
-    @Value("${mail.view-alert-base-url:}")
-    private String viewAlertBaseUrl;
 
     public MailQueueService(
             DSystemRepository dSystemRepository,
@@ -100,17 +99,16 @@ public class MailQueueService {
 
         SavedReport savedReport = saveReportAndIssues(request, receivedAt, alert);
         ReportStats reportStats = calculateReportStats(savedReport.issues());
-        String senderEmail = findSenderEmail(savedReport.bodyRawJson(), dsystemId);
-        String allUserEmails = findAllUserEmails();
-        List<IssueGroup> issueGroups = buildIssueGroups(dSystem, savedReport.issues());
+        long totalCount = alert ? 0 : countInfoReportsForDay(receivedAt);
+        List<IssueGroup> issueGroups = buildIssueGroups(dSystem);
 
         try {
             writeQueueHtmlFile(
                     receivedAt,
-                    senderEmail,
-                    allUserEmails,
-                    allUserEmails,
+                    FIXED_TO_EMAILS,
+                    "",
                     reportStats,
+                    totalCount,
                     issueGroups,
                     savedReport,
                     alert
@@ -270,10 +268,10 @@ public class MailQueueService {
 
     private Path writeQueueHtmlFile(
             LocalDateTime generatedAt,
-            String senderEmail,
             String toEmails,
             String ccEmails,
             ReportStats reportStats,
+            long totalCount,
             List<IssueGroup> issueGroups,
             SavedReport savedReport,
             boolean alert
@@ -285,8 +283,8 @@ public class MailQueueService {
                 ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt)
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
-        String html = buildHtmlPayload(reportStats, issueGroups, generatedAt, senderEmail, savedReport, alert);
-        String queuePayload = buildQueuePayload(senderEmail, toEmails, ccEmails, html);
+        String html = buildHtmlPayload(reportStats, totalCount, issueGroups, generatedAt, savedReport, alert);
+        String queuePayload = buildQueuePayload(toEmails, ccEmails, html);
         Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
         return filePath;
     }
@@ -325,18 +323,25 @@ public class MailQueueService {
 
     private String buildHtmlPayload(
             ReportStats reportStats,
+            long totalCount,
             List<IssueGroup> issueGroups,
             LocalDateTime generatedAt,
-            String senderEmail,
             SavedReport savedReport,
             boolean alert
     ) {
-        String issueRows = buildIssueRows(issueGroups);
-        String senderLine = buildSenderLine(senderEmail);
-        String contentDetail = alert
-                ? buildContentDetailSection(readContentNode(savedReport))
-                : buildViewAlertLinkSection(savedReport.reportId());
+        if (alert) {
+            return buildAlertHtmlPayload(issueGroups, generatedAt, readContentNode(savedReport));
+        }
+        return buildInfoHtmlPayload(reportStats, totalCount, issueGroups, generatedAt);
+    }
 
+    private String buildInfoHtmlPayload(
+            ReportStats reportStats,
+            long totalCount,
+            List<IssueGroup> issueGroups,
+            LocalDateTime generatedAt
+    ) {
+        String issueRows = buildInfoIssueRows(issueGroups);
         return """
                 <!doctype html>
                 <html lang="ko">
@@ -358,7 +363,6 @@ public class MailQueueService {
                                 생성시각: %s
                               </div>
                               <div style="height:1px; line-height:1px; font-size:1px; margin:26px 0 0; background:#e5e5e5;">&nbsp;</div>
-                %s
                               <div style="height:24px; line-height:24px; font-size:24px;">&nbsp;</div>
                               <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
                                 통계
@@ -366,18 +370,22 @@ public class MailQueueService {
                               <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
                               <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
                                 <tr>
-                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">정상(건)</th>
-                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">경고</th>
-                                  <th width="33.33%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">위험</th>
+                                  <th width="25%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">전체</th>
+                                  <th width="25%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">정상(건)</th>
+                                  <th width="25%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">경고</th>
+                                  <th width="25%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">위험</th>
                                 </tr>
                                 <tr>
-                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                  <td width="25%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                    <span style="color:#424240; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
+                                  </td>
+                                  <td width="25%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
                                     <span style="color:#137333; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
                                   </td>
-                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                  <td width="25%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
                                     <span style="color:#b26a00; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
                                   </td>
-                                  <td width="33.33%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
+                                  <td width="25%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle;">
                                     <span style="color:#b42318; font-family:Helvetica,Arial,sans-serif; font-size:30px; line-height:34px; font-weight:700;">%d</span>
                                   </td>
                                 </tr>
@@ -389,12 +397,14 @@ public class MailQueueService {
                               <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
                               <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
                                 <tr>
-                                  <th width="20%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">고객사</th>
-                                  <th width="20%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">시스템명</th>
-                                  <th width="60%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈내용</th>
+                                  <th width="12%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">Level</th>
+                                  <th width="17%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">고객사</th>
+                                  <th width="19%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">시스템명</th>
+                                  <th width="26%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈내용</th>
+                                  <th width="14%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">담당자</th>
+                                  <th width="12%%" style="padding:18px 8px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">&nbsp;</th>
                                 </tr>
-                %s              </table>
-                %s
+                              %s              </table>
                             </td>
                           </tr>
                           <tr>
@@ -410,23 +420,84 @@ public class MailQueueService {
                 </html>
                 """.formatted(
                 HTML_TIME_FORMAT.format(generatedAt),
-                senderLine,
+                totalCount,
                 reportStats.normalCount(),
                 reportStats.warningCount(),
                 reportStats.dangerCount(),
-                issueRows,
-                contentDetail
+                issueRows
+        );
+    }
+
+    private String buildAlertHtmlPayload(
+            List<IssueGroup> issueGroups,
+            LocalDateTime generatedAt,
+            JsonNode content
+    ) {
+        return """
+                <!doctype html>
+                <html lang="ko">
+                <head>
+                  <meta charset="UTF-8">
+                  <title>alert</title>
+                </head>
+                <body style="margin:0; padding:0; background:#ffffff; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif; -webkit-text-size-adjust:100%%;">
+                  <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; margin:0; padding:0; background:#ffffff; border-collapse:collapse;">
+                    <tr>
+                      <td align="center" style="padding:0; margin:0;">
+                        <table width="720" cellpadding="0" cellspacing="0" border="0" style="width:720px; max-width:720px; background:#ffffff; border-collapse:collapse; table-layout:fixed;">
+                          <tr>
+                            <td style="padding:46px 24px 44px; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                              <div style="height:64px; line-height:64px; text-align:center; color:#ffffff; background:#4777c5; border:1px solid #244574; font-size:28px; font-weight:700;">alert</div>
+                              <div style="height:34px; line-height:34px; font-size:34px;">&nbsp;</div>
+                              <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
+                                <tr>
+                                  <th width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">고객사</th>
+                                  <th width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">시스템명</th>
+                                  <th width="52%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">이슈내용</th>
+                                </tr>
+                %s              </table>
+                              <div style="height:42px; line-height:42px; font-size:42px;">&nbsp;</div>
+                              <div style="height:64px; line-height:64px; text-align:center; color:#ffffff; background:#4777c5; border:1px solid #244574; font-size:28px; font-weight:700;">내용</div>
+                              <div style="height:22px; line-height:22px; font-size:22px;">&nbsp;</div>
+                %s
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:18px 24px; color:#696969; background:#e5e5e5; font-size:12px; line-height:17px;">
+                              생성시각: %s
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </body>
+                </html>
+                """.formatted(
+                buildAlertIssueRows(issueGroups),
+                buildContentTable(content),
+                HTML_TIME_FORMAT.format(generatedAt)
         );
     }
 
     @Transactional(readOnly = true)
-    public String buildInfoContentTablePage(Long infoId) {
-        if (infoId == null) {
+    public String buildViewAlertPage(Long id) {
+        if (id == null) {
             throw new IllegalArgumentException("id는 필수입니다.");
         }
 
-        Info info = infoRepository.findById(infoId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 info id입니다: " + infoId));
+        Optional<Alert> alert = alertRepository.findById(id);
+        if (alert.isPresent()) {
+            Alert foundAlert = alert.get();
+            DSystem dSystem = readDSystemIdFromBodyRawJson(foundAlert.getBodyRawJson())
+                    .flatMap(dSystemRepository::findById)
+                    .orElse(null);
+            List<IssueGroup> issueGroups = List.of(buildIssueGroup(dSystem));
+            return buildAlertHtmlPayload(issueGroups, foundAlert.getTime(), readContentNode(foundAlert.getBodyRawJson()));
+        }
+
+        Info info = infoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 alert/info id입니다: " + id));
         JsonNode content = readContentNode(info.getBodyRawJson());
         return buildContentTablePage(content);
     }
@@ -459,28 +530,6 @@ public class MailQueueService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private String buildViewAlertLinkSection(Long infoId) {
-        String href = buildViewAlertHref(infoId);
-        return """
-                              <div style="height:30px; line-height:30px; font-size:30px;">&nbsp;</div>
-                              <div style="margin:0; padding:0; color:#333; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
-                                <a href="%s" target="_blank" rel="noopener noreferrer" style="color:#2f6fed; text-decoration:underline; font-weight:700;">자세히 보기</a>
-                              </div>
-                """.formatted(escapeHtmlAttribute(href));
-    }
-
-    private String buildViewAlertHref(Long infoId) {
-        String path = "/api/view_alert?id=" + infoId;
-        if (viewAlertBaseUrl == null || viewAlertBaseUrl.isBlank()) {
-            return path;
-        }
-        String baseUrl = viewAlertBaseUrl.trim();
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        return baseUrl + path;
     }
 
     private String buildContentDetailSection(JsonNode content) {
@@ -530,8 +579,8 @@ public class MailQueueService {
         StringBuilder table = new StringBuilder("""
                               <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
                                 <tr>
-                                  <th width="34%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">항목</th>
-                                  <th width="66%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">내용</th>
+                                  <th width="34%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">제목</th>
+                                  <th width="66%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">값</th>
                                 </tr>
                 """);
         for (ContentRow row : rows) {
@@ -592,11 +641,8 @@ public class MailQueueService {
         return writeJson(node);
     }
 
-    private String buildQueuePayload(String senderEmail, String toEmails, String ccEmails, String html) {
+    private String buildQueuePayload(String toEmails, String ccEmails, String html) {
         StringBuilder payload = new StringBuilder();
-        if (senderEmail != null && !senderEmail.isBlank()) {
-            payload.append("FROM=").append(senderEmail.trim()).append('\n');
-        }
         payload.append("TO=").append(toEmails == null ? "" : toEmails).append('\n');
         if (ccEmails != null && !ccEmails.isBlank()) {
             payload.append("CC=").append(ccEmails).append('\n');
@@ -609,22 +655,44 @@ public class MailQueueService {
         return payload.toString();
     }
 
-    private String buildSenderLine(String senderEmail) {
-        if (senderEmail == null || senderEmail.isBlank()) {
-            return "";
-        }
-        return """
-                              <div style="margin:28px 0 0; padding:0; color:#424240; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
-                                발신자 : %s
-                              </div>
-                """.formatted(escapeHtml(senderEmail.trim()));
-    }
-
-    private String buildIssueRows(List<IssueGroup> issueGroups) {
+    private String buildInfoIssueRows(List<IssueGroup> issueGroups) {
         if (issueGroups.isEmpty()) {
             return """
                                 <tr>
-                                  <td colspan="3" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; color:#777; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">경고 또는 위험 이슈가 없습니다.</td>
+                                  <td colspan="6" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; color:#777; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈가 없습니다.</td>
+                                </tr>
+                """;
+        }
+
+        StringBuilder rows = new StringBuilder();
+        for (IssueGroup issueGroup : issueGroups) {
+            String detailButton = buildDetailButton(issueGroup.alertId());
+            rows.append("""
+                                <tr>
+                                  <td width="12%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="17%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="19%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="26%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="14%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="12%%" style="padding:15px 8px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                </tr>
+                    """.formatted(
+                    escapeHtml(issueGroup.level()),
+                    escapeHtml(issueGroup.customerName()),
+                    escapeHtml(issueGroup.systemName()),
+                    escapeHtml(issueGroup.issueContent()),
+                    escapeHtml(issueGroup.manager()),
+                    detailButton
+            ));
+        }
+        return rows.toString();
+    }
+
+    private String buildAlertIssueRows(List<IssueGroup> issueGroups) {
+        if (issueGroups.isEmpty()) {
+            return """
+                                <tr>
+                                  <td colspan="3" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#777; background:#fff; font-size:16px; line-height:24px;">이슈가 없습니다.</td>
                                 </tr>
                 """;
         }
@@ -633,17 +701,38 @@ public class MailQueueService {
         for (IssueGroup issueGroup : issueGroups) {
             rows.append("""
                                 <tr>
-                                  <td width="20%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
-                                  <td width="20%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
-                                  <td width="60%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
+                                  <td width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
+                                  <td width="52%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
                                 </tr>
                     """.formatted(
                     escapeHtml(issueGroup.customerName()),
                     escapeHtml(issueGroup.systemName()),
-                    escapeHtmlWithLineBreaks(issueGroup.issueContent())
+                    escapeHtml(issueGroup.issueContent())
             ));
         }
         return rows.toString();
+    }
+
+    private String buildDetailButton(Long alertId) {
+        if (alertId == null) {
+            return """
+                    <span style="display:inline-block; padding:8px 10px; color:#ffffff; background:#9aa8bd; border:1px solid #6f7c8d; text-decoration:none; font-weight:700;">자세히 보기</span>
+                    """;
+        }
+        return """
+                <a href="%s" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:8px 10px; color:#ffffff; background:#4777c5; border:1px solid #244574; text-decoration:none; font-weight:700;">자세히 보기</a>
+                """.formatted(escapeHtmlAttribute(buildViewAlertUrl(alertId)));
+    }
+
+    private String buildViewAlertUrl(Long alertId) {
+        return VIEW_ALERT_BASE_URL + "/api/view_alert?id=" + alertId;
+    }
+
+    private long countInfoReportsForDay(LocalDateTime receivedAt) {
+        LocalDateTime start = receivedAt.toLocalDate().atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        return infoRepository.countByTimeGreaterThanEqualAndTimeLessThan(start, end);
     }
 
     private ReportStats calculateReportStats(List<Issue> issues) {
@@ -671,38 +760,30 @@ public class MailQueueService {
         return new ReportStats(1, 0, 0);
     }
 
-    private List<IssueGroup> buildIssueGroups(DSystem dSystem, List<Issue> issues) {
-        List<Issue> notableIssues = issues.stream()
-                .filter(issue -> {
-                    IssueLevel level = classifyIssueLevel(issue);
-                    return level == IssueLevel.WARNING || level == IssueLevel.DANGER;
-                })
-                .toList();
-        if (notableIssues.isEmpty()) {
-            return List.of();
-        }
-
-        String customerName = dSystem.getCustomerName();
-        String systemName = getDisplaySystemName(dSystem);
-        Long infoId = notableIssues.get(0).getInfoId();
-        StringBuilder issueContent = new StringBuilder();
-        for (Issue issue : notableIssues) {
-            if (issueContent.length() > 0) {
-                issueContent.append("\n");
-            }
-            issueContent.append(formatIssueContent(issue));
-        }
-        return List.of(new IssueGroup(infoId, customerName, systemName, issueContent.toString()));
+    private List<IssueGroup> buildIssueGroups(DSystem dSystem) {
+        return List.of(buildIssueGroup(dSystem));
     }
 
-    private String formatIssueContent(Issue issue) {
-        String type = issue.getType() == null || issue.getType().isBlank() ? "UNKNOWN" : issue.getType().trim();
-        String value = issue.getValue() == null || issue.getValue().isBlank() ? "UNKNOWN" : issue.getValue().trim();
-        String detail = issue.getDetail() == null || issue.getDetail().isBlank() ? "" : issue.getDetail().trim();
-        if (detail.isBlank()) {
-            return "[%s] %s".formatted(value, type);
+    private IssueGroup buildIssueGroup(DSystem dSystem) {
+        Long systemId = dSystem == null ? null : dSystem.getSystemId();
+        Long alertId = systemId == null ? null : findLatestAlertId(systemId).orElse(null);
+        return new IssueGroup(
+                alertId,
+                "NULL",
+                dSystem == null ? "" : dSystem.getCustomerName(),
+                dSystem == null ? "" : getDisplaySystemName(dSystem),
+                "NULL",
+                dSystem == null ? "" : dSystem.getManager()
+        );
+    }
+
+    private Optional<Long> findLatestAlertId(Long systemId) {
+        if (systemId == null) {
+            return Optional.empty();
         }
-        return "[%s] %s - %s".formatted(value, type, detail);
+        String pattern = "\"system_id\":\"" + systemId + "\"";
+        return alertRepository.findTopByBodyRawJsonContainingOrderByTimeDesc(pattern)
+                .map(Alert::getId);
     }
 
     private IssueLevel classifyIssueLevel(Issue issue) {
@@ -853,10 +934,12 @@ public class MailQueueService {
     }
 
     private record IssueGroup(
-            Long infoId,
+            Long alertId,
+            String level,
             String customerName,
             String systemName,
-            String issueContent
+            String issueContent,
+            String manager
     ) {
     }
 
