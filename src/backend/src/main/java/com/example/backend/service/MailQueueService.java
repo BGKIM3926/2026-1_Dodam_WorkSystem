@@ -444,27 +444,39 @@ public class MailQueueService {
                   <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; margin:0; padding:0; background:#ffffff; border-collapse:collapse;">
                     <tr>
                       <td align="center" style="padding:0; margin:0;">
-                        <table width="720" cellpadding="0" cellspacing="0" border="0" style="width:720px; max-width:720px; background:#ffffff; border-collapse:collapse; table-layout:fixed;">
+                        <table width="595" cellpadding="0" cellspacing="0" border="0" style="width:595px; max-width:595px; background:#ffffff; border-collapse:collapse; table-layout:fixed;">
                           <tr>
-                            <td style="padding:46px 24px 44px; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
-                              <div style="height:64px; line-height:64px; text-align:center; color:#ffffff; background:#4777c5; border:1px solid #244574; font-size:28px; font-weight:700;">alert</div>
-                              <div style="height:34px; line-height:34px; font-size:34px;">&nbsp;</div>
+                            <td style="padding:56px 21px 44px; color:#333; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                              <div style="margin:0; padding:0; color:#424240; font-size:28px; line-height:34px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                <span style="color:#2f6fed;">alert</span>
+                              </div>
+                              <div style="margin:14px 0 0; padding:0; color:#696969; font-size:13px; line-height:20px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                생성시각: %s
+                              </div>
+                              <div style="height:1px; line-height:1px; font-size:1px; margin:26px 0 0; background:#e5e5e5;">&nbsp;</div>
+                              <div style="height:24px; line-height:24px; font-size:24px;">&nbsp;</div>
+                              <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                alert
+                              </div>
+                              <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
                               <table width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%; border-collapse:collapse; table-layout:fixed;">
                                 <tr>
-                                  <th width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">고객사</th>
-                                  <th width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">시스템명</th>
-                                  <th width="52%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:20px; line-height:28px; font-weight:700;">이슈내용</th>
+                                  <th width="20%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">고객사</th>
+                                  <th width="25%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">시스템명</th>
+                                  <th width="55%%" style="padding:18px 10px 15px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; color:#696969; background:#ffffff; font-size:14px; line-height:22px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈내용</th>
                                 </tr>
                 %s              </table>
                               <div style="height:42px; line-height:42px; font-size:42px;">&nbsp;</div>
-                              <div style="height:64px; line-height:64px; text-align:center; color:#ffffff; background:#4777c5; border:1px solid #244574; font-size:28px; font-weight:700;">내용</div>
-                              <div style="height:22px; line-height:22px; font-size:22px;">&nbsp;</div>
+                              <div style="height:24px; color:#000; font-size:14px; line-height:24px; font-weight:700; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                                내용
+                              </div>
+                              <div style="height:2px; line-height:2px; font-size:2px; background:#424240;">&nbsp;</div>
                 %s
                             </td>
                           </tr>
                           <tr>
-                            <td style="padding:18px 24px; color:#696969; background:#e5e5e5; font-size:12px; line-height:17px;">
-                              생성시각: %s
+                            <td style="padding:18px 21px; color:#696969; background:#e5e5e5; font-size:12px; line-height:17px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">
+                              본 메일은 시스템 점검 결과를 바탕으로 자동 생성되었습니다.
                             </td>
                           </tr>
                         </table>
@@ -474,9 +486,9 @@ public class MailQueueService {
                 </body>
                 </html>
                 """.formatted(
+                HTML_TIME_FORMAT.format(generatedAt),
                 buildAlertIssueRows(issueGroups),
-                buildContentTable(content),
-                HTML_TIME_FORMAT.format(generatedAt)
+                buildContentTable(content)
         );
     }
 
@@ -692,7 +704,7 @@ public class MailQueueService {
         if (issueGroups.isEmpty()) {
             return """
                                 <tr>
-                                  <td colspan="3" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#777; background:#fff; font-size:16px; line-height:24px;">이슈가 없습니다.</td>
+                                  <td colspan="3" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:center; vertical-align:middle; color:#777; font-size:14px; line-height:22px; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">이슈가 없습니다.</td>
                                 </tr>
                 """;
         }
@@ -701,9 +713,9 @@ public class MailQueueService {
         for (IssueGroup issueGroup : issueGroups) {
             rows.append("""
                                 <tr>
-                                  <td width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
-                                  <td width="24%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
-                                  <td width="52%%" style="padding:18px 10px; border:1px solid #555; text-align:center; color:#fff; background:#aaa; font-size:18px; line-height:26px; word-break:break-word;">%s</td>
+                                  <td width="20%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="25%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
+                                  <td width="55%%" style="padding:15px 10px; border:0; border-bottom:1px dotted #e6e6e6; text-align:left; vertical-align:middle; color:#333; font-size:14px; line-height:22px; word-break:break-word; font-family:'NanumGothic','Malgun Gothic','Apple SD Gothic Neo',Dotum,Helvetica,sans-serif;">%s</td>
                                 </tr>
                     """.formatted(
                     escapeHtml(issueGroup.customerName()),
