@@ -51,8 +51,6 @@ public class MailQueueService {
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-    private static final DateTimeFormatter SUMMARY_FILE_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter SUMMARY_SUBJECT_DATE_FORMAT =
             DateTimeFormatter.ofPattern("MM/dd");
     private static final DateTimeFormatter HTML_TIME_FORMAT =
@@ -149,7 +147,7 @@ public class MailQueueService {
         String html = buildInfoHtmlPayload(summary.reportStats(), summary.totalCount(), summary.issueGroups(), generatedAt);
 
         try {
-            writeDailySummaryQueueFile(operationDate, FIXED_TO_EMAILS, "", subject, html);
+            writeDailySummaryQueueFile(FIXED_TO_EMAILS, "", subject, html);
         } catch (IOException e) {
             throw new IllegalStateException("일일 점검 결과 메일 큐 파일 저장에 실패했습니다.");
         }
@@ -327,7 +325,6 @@ public class MailQueueService {
     }
 
     private Path writeDailySummaryQueueFile(
-            LocalDate operationDate,
             String toEmails,
             String ccEmails,
             String subject,
@@ -336,10 +333,7 @@ public class MailQueueService {
         Path resolvedQueueDir = resolveQueueDirectory();
         Files.createDirectories(resolvedQueueDir);
 
-        Path filePath = resolvedQueueDir.resolve("summary-" + SUMMARY_FILE_DATE_FORMAT.format(operationDate) + ".html");
-        if (Files.exists(filePath)) {
-            return filePath;
-        }
+        Path filePath = resolveQueueFilePath(resolvedQueueDir, nowInKorea());
 
         String queuePayload = buildQueuePayload(toEmails, ccEmails, subject, html);
         Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
