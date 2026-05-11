@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,8 +51,13 @@ public class MailQueueService {
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final DateTimeFormatter SUMMARY_FILE_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter SUMMARY_SUBJECT_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("MM/dd");
     private static final DateTimeFormatter HTML_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final LocalTime SUMMARY_PERIOD_TIME = LocalTime.of(8, 31);
     private static final Pattern BARE_DASH_JSON_VALUE_PATTERN =
             Pattern.compile("(:\\s*)-(\\s*[,}\\]])");
 
@@ -99,8 +107,12 @@ public class MailQueueService {
         DSystem dSystem = findDSystemOrThrow(dsystemId);
 
         SavedReport savedReport = saveReportAndIssues(request, receivedAt, alert);
+        if (!alert) {
+            return new MailResponseDto(requestId, "SAVED");
+        }
+
         ReportStats reportStats = calculateReportStats(savedReport.issues());
-        long totalCount = alert ? 0 : countInfoReportsForDay(receivedAt);
+        long totalCount = 0;
         List<IssueGroup> issueGroups = buildIssueGroups(dSystem);
 
         try {
@@ -117,6 +129,29 @@ public class MailQueueService {
             return new MailResponseDto(requestId, "FILE_WRITTEN");
         } catch (IOException e) {
             throw new IllegalStateException("메일 큐 파일 저장에 실패했습니다.");
+        }
+    }
+
+    @Scheduled(cron = "0 59 8 * * *", zone = "Asia/Seoul")
+    @Transactional(readOnly = true)
+    public void writeDailyInfoSummaryQueueFile() {
+        LocalDate operationDate = LocalDate.now(KOREA_ZONE);
+        LocalDateTime periodStart = operationDate.minusDays(1).atTime(SUMMARY_PERIOD_TIME);
+        LocalDateTime periodEnd = operationDate.atTime(SUMMARY_PERIOD_TIME);
+        List<Info> infos = infoRepository.findByTimeGreaterThanEqualAndTimeLessThanOrderByTimeAsc(periodStart, periodEnd);
+        if (infos.isEmpty()) {
+            return;
+        }
+
+        DailyInfoSummary summary = summarizeInfos(infos);
+        String subject = INFO_MAIL_SUBJECT + "(" + SUMMARY_SUBJECT_DATE_FORMAT.format(operationDate) + ")";
+        LocalDateTime generatedAt = nowInKorea();
+        String html = buildInfoHtmlPayload(summary.reportStats(), summary.totalCount(), summary.issueGroups(), generatedAt);
+
+        try {
+            writeDailySummaryQueueFile(operationDate, FIXED_TO_EMAILS, "", subject, html);
+        } catch (IOException e) {
+            throw new IllegalStateException("일일 점검 결과 메일 큐 파일 저장에 실패했습니다.");
         }
     }
 
@@ -286,6 +321,26 @@ public class MailQueueService {
 
         String html = buildHtmlPayload(reportStats, totalCount, issueGroups, generatedAt, savedReport, alert);
         String subject = alert ? ALERT_MAIL_SUBJECT : INFO_MAIL_SUBJECT;
+        String queuePayload = buildQueuePayload(toEmails, ccEmails, subject, html);
+        Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
+        return filePath;
+    }
+
+    private Path writeDailySummaryQueueFile(
+            LocalDate operationDate,
+            String toEmails,
+            String ccEmails,
+            String subject,
+            String html
+    ) throws IOException {
+        Path resolvedQueueDir = resolveQueueDirectory();
+        Files.createDirectories(resolvedQueueDir);
+
+        Path filePath = resolvedQueueDir.resolve("summary-" + SUMMARY_FILE_DATE_FORMAT.format(operationDate) + ".html");
+        if (Files.exists(filePath)) {
+            return filePath;
+        }
+
         String queuePayload = buildQueuePayload(toEmails, ccEmails, subject, html);
         Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
         return filePath;
@@ -749,9 +804,113 @@ public class MailQueueService {
         return infoRepository.countByTimeGreaterThanEqualAndTimeLessThan(start, end);
     }
 
+    private DailyInfoSummary summarizeInfos(List<Info> infos) {
+        int normalCount = 0;
+        int warningCount = 0;
+        int dangerCount = 0;
+        List<IssueGroup> issueGroups = new ArrayList<>();
+
+        for (Info info : infos) {
+            JsonNode content = readContentNode(info.getBodyRawJson());
+            List<Issue> issues = extractIssues(content);
+            IssueLevel reportLevel = calculateIssueLevel(issues);
+            if (reportLevel == IssueLevel.DANGER) {
+                dangerCount++;
+            } else if (reportLevel == IssueLevel.WARNING) {
+                warningCount++;
+            } else {
+                normalCount++;
+            }
+
+            Long systemId = readDSystemIdFromBodyRawJson(info.getBodyRawJson()).orElse(null);
+            DSystem dSystem = systemId == null
+                    ? null
+                    : dSystemRepository.findById(systemId).orElse(null);
+            issueGroups.addAll(buildInfoIssueGroups(dSystem, issues));
+        }
+
+        return new DailyInfoSummary(
+                infos.size(),
+                new ReportStats(normalCount, warningCount, dangerCount),
+                issueGroups
+        );
+    }
+
+    private List<Issue> extractIssues(JsonNode reportJson) {
+        JsonNode issues = getIssueArray(reportJson);
+        if (issues == null || !issues.isArray()) {
+            return List.of();
+        }
+
+        List<Issue> extractedIssues = new ArrayList<>();
+        for (JsonNode item : issues) {
+            Issue issue = new Issue();
+            issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
+            issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
+            issue.setDetail(readIssueDetail(item));
+            extractedIssues.add(issue);
+        }
+        return extractedIssues;
+    }
+
+    private List<IssueGroup> buildInfoIssueGroups(DSystem dSystem, List<Issue> issues) {
+        List<IssueGroup> issueGroups = new ArrayList<>();
+        for (Issue issue : issues) {
+            IssueLevel level = classifyIssueLevel(issue);
+            if (level == IssueLevel.NORMAL) {
+                continue;
+            }
+            issueGroups.add(new IssueGroup(
+                    null,
+                    displayIssueLevel(level),
+                    dSystem == null ? "" : dSystem.getCustomerName(),
+                    dSystem == null ? "" : getDisplaySystemName(dSystem),
+                    buildIssueContent(issue),
+                    dSystem == null ? "" : dSystem.getManager()
+            ));
+        }
+        return issueGroups;
+    }
+
+    private String buildIssueContent(Issue issue) {
+        if (issue == null) {
+            return "";
+        }
+        String type = issue.getType() == null ? "" : issue.getType().trim();
+        String detail = issue.getDetail() == null ? "" : issue.getDetail().trim();
+        if (type.isBlank()) {
+            return detail;
+        }
+        if (detail.isBlank()) {
+            return type;
+        }
+        return type + " - " + detail;
+    }
+
+    private String displayIssueLevel(IssueLevel level) {
+        if (level == IssueLevel.DANGER) {
+            return "위험";
+        }
+        if (level == IssueLevel.WARNING) {
+            return "경고";
+        }
+        return "정상";
+    }
+
     private ReportStats calculateReportStats(List<Issue> issues) {
+        IssueLevel systemLevel = calculateIssueLevel(issues);
+        if (systemLevel == IssueLevel.DANGER) {
+            return new ReportStats(0, 0, 1);
+        }
+        if (systemLevel == IssueLevel.WARNING) {
+            return new ReportStats(0, 1, 0);
+        }
+        return new ReportStats(1, 0, 0);
+    }
+
+    private IssueLevel calculateIssueLevel(List<Issue> issues) {
         if (issues.isEmpty()) {
-            return new ReportStats(1, 0, 0);
+            return IssueLevel.NORMAL;
         }
 
         IssueLevel systemLevel = IssueLevel.NORMAL;
@@ -764,14 +923,7 @@ public class MailQueueService {
                 systemLevel = IssueLevel.WARNING;
             }
         }
-
-        if (systemLevel == IssueLevel.DANGER) {
-            return new ReportStats(0, 0, 1);
-        }
-        if (systemLevel == IssueLevel.WARNING) {
-            return new ReportStats(0, 1, 0);
-        }
-        return new ReportStats(1, 0, 0);
+        return systemLevel;
     }
 
     private List<IssueGroup> buildIssueGroups(DSystem dSystem) {
@@ -937,6 +1089,13 @@ public class MailQueueService {
     private record ContentRow(
             String key,
             String value
+    ) {
+    }
+
+    private record DailyInfoSummary(
+            long totalCount,
+            ReportStats reportStats,
+            List<IssueGroup> issueGroups
     ) {
     }
 
