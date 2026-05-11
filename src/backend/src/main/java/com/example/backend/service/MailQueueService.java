@@ -41,7 +41,8 @@ public class MailQueueService {
 
     private static final int MAX_SYSTEM_ID_LENGTH = 100;
     private static final int MAX_BODY_LENGTH = 65535;
-    private static final String MAIL_SUBJECT = "시스템 점검 결과 안내";
+    private static final String INFO_MAIL_SUBJECT = "시스템 점검 결과 안내";
+    private static final String ALERT_MAIL_SUBJECT = "시스템 ALERT 발생";
     private static final String FIXED_TO_EMAILS = "enek4444@naver.com;kjh@dodamsol.kro.kr";
     private static final String VIEW_ALERT_BASE_URL = "http://dodam.tplinkdns.com:28080";
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
@@ -284,7 +285,8 @@ public class MailQueueService {
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
         String html = buildHtmlPayload(reportStats, totalCount, issueGroups, generatedAt, savedReport, alert);
-        String queuePayload = buildQueuePayload(toEmails, ccEmails, html);
+        String subject = alert ? ALERT_MAIL_SUBJECT : INFO_MAIL_SUBJECT;
+        String queuePayload = buildQueuePayload(toEmails, ccEmails, subject, html);
         Files.writeString(filePath, queuePayload, StandardCharsets.UTF_8);
         return filePath;
     }
@@ -653,13 +655,13 @@ public class MailQueueService {
         return writeJson(node);
     }
 
-    private String buildQueuePayload(String toEmails, String ccEmails, String html) {
+    private String buildQueuePayload(String toEmails, String ccEmails, String subject, String html) {
         StringBuilder payload = new StringBuilder();
         payload.append("TO=").append(toEmails == null ? "" : toEmails).append('\n');
         if (ccEmails != null && !ccEmails.isBlank()) {
             payload.append("CC=").append(ccEmails).append('\n');
         }
-        payload.append("SUBJECT=").append(MAIL_SUBJECT).append('\n');
+        payload.append("SUBJECT=").append(subject).append('\n');
         payload.append("CONTENT_TYPE=html\n");
         payload.append("CHARSET=UTF-8\n\n");
         payload.append("__BODY__\n");
