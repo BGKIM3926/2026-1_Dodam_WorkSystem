@@ -42,6 +42,7 @@ Thumbs.db
 .turbo
 out/
 .gradle-local/
+.gradle-test/
 
 npm-debug.log*
 yarn-debug.log*

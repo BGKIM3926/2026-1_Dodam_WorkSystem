@@ -20,6 +20,15 @@ public class Issue {
     @Column(name = "info_id")
     private Long infoId;
 
+    @Column(name = "issuekey", length = 100)
+    private String issueKey;
+
+    @Column(name = "level", length = 50)
+    private String level;
+
+    @Column(name = "target", length = 100)
+    private String target;
+
     @Column(name = "type", length = 100)
     private String type;
 
@@ -44,6 +53,30 @@ public class Issue {
 
     public void setInfoId(Long infoId) {
         this.infoId = infoId;
+    }
+
+    public String getIssueKey() {
+        return issueKey;
+    }
+
+    public void setIssueKey(String issueKey) {
+        this.issueKey = issueKey;
+    }
+
+    public String getLevel() {
+        return level;
+    }
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
+    public void setTarget(String target) {
+        this.target = target;
     }
 
     public String getType() {

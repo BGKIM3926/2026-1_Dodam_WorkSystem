@@ -51,6 +51,8 @@ public class MailQueueService {
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+    private static final DateTimeFormatter ALERT_FILE_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("HHmmss");
     private static final DateTimeFormatter SUMMARY_SUBJECT_DATE_FORMAT =
             DateTimeFormatter.ofPattern("MM/dd");
     private static final DateTimeFormatter HTML_TIME_FORMAT =
@@ -192,6 +194,9 @@ public class MailQueueService {
         for (JsonNode item : issues) {
             Issue issue = new Issue();
             issue.setInfoId(infoId);
+            issue.setIssueKey(readText(item, "issuekey", ""));
+            issue.setLevel(readText(item, "level", ""));
+            issue.setTarget(readText(item, "target", ""));
             issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));
@@ -314,7 +319,7 @@ public class MailQueueService {
         Files.createDirectories(resolvedQueueDir);
 
         Path filePath = alert
-                ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt)
+                ? resolveAlertQueueFilePath(resolvedQueueDir, generatedAt, readFirstIssueKey(savedReport))
                 : resolveQueueFilePath(resolvedQueueDir, generatedAt);
 
         String html = buildHtmlPayload(reportStats, totalCount, issueGroups, generatedAt, savedReport, alert);
@@ -354,14 +359,42 @@ public class MailQueueService {
         return candidatePath;
     }
 
-    private Path resolveAlertQueueFilePath(Path queueDir, LocalDateTime generatedAt) {
+    private Path resolveAlertQueueFilePath(Path queueDir, LocalDateTime generatedAt, String issueKey) {
         LocalDateTime candidateTime = generatedAt;
         Path candidatePath;
+        String safeIssueKey = sanitizeFileNamePart(issueKey);
         do {
-            candidatePath = queueDir.resolve(FILE_TIME_FORMAT.format(candidateTime) + "-ALERT.html");
+            String fileName = safeIssueKey.isBlank()
+                    ? FILE_TIME_FORMAT.format(candidateTime) + "-ALERT.html"
+                    : safeIssueKey + "-" + ALERT_FILE_TIME_FORMAT.format(candidateTime) + "-ALERT.html";
+            candidatePath = queueDir.resolve(fileName);
             candidateTime = candidateTime.plusSeconds(1);
         } while (Files.exists(candidatePath));
         return candidatePath;
+    }
+
+    private String readFirstIssueKey(SavedReport savedReport) {
+        if (savedReport == null || savedReport.reportJson() == null) {
+            return "";
+        }
+        JsonNode issues = getIssueArray(savedReport.reportJson());
+        if (issues == null || !issues.isArray()) {
+            return "";
+        }
+        for (JsonNode issue : issues) {
+            String issueKey = readText(issue, "issuekey", "");
+            if (issueKey != null && !issueKey.isBlank()) {
+                return issueKey.trim();
+            }
+        }
+        return "";
+    }
+
+    private String sanitizeFileNamePart(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim().replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
     private Path resolveQueueDirectory() {
@@ -839,6 +872,9 @@ public class MailQueueService {
         List<Issue> extractedIssues = new ArrayList<>();
         for (JsonNode item : issues) {
             Issue issue = new Issue();
+            issue.setIssueKey(readText(item, "issuekey", ""));
+            issue.setLevel(readText(item, "level", ""));
+            issue.setTarget(readText(item, "target", ""));
             issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));
@@ -855,7 +891,7 @@ public class MailQueueService {
                 continue;
             }
             issueGroups.add(new IssueGroup(
-                    null,
+                    findAlertIdByIssueKey(issue.getIssueKey()).orElse(null),
                     displayIssueLevel(level),
                     dSystem == null ? "" : dSystem.getCustomerName(),
                     dSystem == null ? "" : getDisplaySystemName(dSystem),
@@ -864,6 +900,15 @@ public class MailQueueService {
             ));
         }
         return issueGroups;
+    }
+
+    private Optional<Long> findAlertIdByIssueKey(String issueKey) {
+        if (issueKey == null || issueKey.isBlank()) {
+            return Optional.empty();
+        }
+        String pattern = "\"issuekey\":\"" + escapeJsonString(issueKey.trim()) + "\"";
+        return alertRepository.findTopByBodyRawJsonContainingOrderByTimeDesc(pattern)
+                .map(Alert::getId);
     }
 
     private String buildIssueContent(Issue issue) {
@@ -944,6 +989,14 @@ public class MailQueueService {
         String pattern = "\"system_id\":\"" + systemId + "\"";
         return alertRepository.findTopByBodyRawJsonContainingOrderByTimeDesc(pattern)
                 .map(Alert::getId);
+    }
+
+    private String escapeJsonString(String value) {
+        try {
+            return objectMapper.writeValueAsString(value).replaceAll("^\"|\"$", "");
+        } catch (Exception e) {
+            return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        }
     }
 
     private IssueLevel classifyIssueLevel(Issue issue) {
