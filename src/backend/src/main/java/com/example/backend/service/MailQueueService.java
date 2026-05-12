@@ -113,7 +113,7 @@ public class MailQueueService {
 
         ReportStats reportStats = calculateReportStats(savedReport.issues());
         long totalCount = 0;
-        List<IssueGroup> issueGroups = buildIssueGroups(dSystem);
+        List<IssueGroup> issueGroups = buildIssueGroups(dSystem, readContentNode(savedReport));
 
         try {
             writeQueueHtmlFile(
@@ -203,7 +203,7 @@ public class MailQueueService {
             issue.setIssueKey(readText(item, "issuekey", ""));
             issue.setLevel(readText(item, "level", ""));
             issue.setTarget(readText(item, "target", ""));
-            issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
+            issue.setType(readText(item, "event_code", readText(item, "type", readText(item, "category", "UNKNOWN"))));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));
             savedIssues.add(issueRepository.save(issue));
@@ -601,7 +601,7 @@ public class MailQueueService {
             DSystem dSystem = readDSystemIdFromBodyRawJson(foundAlert.getBodyRawJson())
                     .flatMap(dSystemRepository::findById)
                     .orElse(null);
-            List<IssueGroup> issueGroups = List.of(buildIssueGroup(dSystem));
+            List<IssueGroup> issueGroups = buildIssueGroups(dSystem, readContentNode(foundAlert.getBodyRawJson()));
             return buildAlertHtmlPayload(issueGroups, foundAlert.getTime(), readContentNode(foundAlert.getBodyRawJson()));
         }
 
@@ -888,7 +888,7 @@ public class MailQueueService {
             issue.setIssueKey(readText(item, "issuekey", ""));
             issue.setLevel(readText(item, "level", ""));
             issue.setTarget(readText(item, "target", ""));
-            issue.setType(readText(item, "type", readText(item, "category", "UNKNOWN")));
+            issue.setType(readText(item, "event_code", readText(item, "type", readText(item, "category", "UNKNOWN"))));
             issue.setValue(readText(item, "value", readText(item, "level", "UNKNOWN")));
             issue.setDetail(readIssueDetail(item));
             extractedIssues.add(issue);
@@ -908,7 +908,7 @@ public class MailQueueService {
                     displayIssueLevel(level),
                     dSystem == null ? "" : dSystem.getCustomerName(),
                     dSystem == null ? "" : getDisplaySystemName(dSystem),
-                    buildIssueContent(issue),
+                    buildInfoIssueContent(issue),
                     dSystem == null ? "" : dSystem.getManager()
             ));
         }
@@ -922,6 +922,17 @@ public class MailQueueService {
         String pattern = "\"issuekey\":\"" + escapeJsonString(issueKey.trim()) + "\"";
         return alertRepository.findTopByBodyRawJsonContainingOrderByTimeDesc(pattern)
                 .map(Alert::getId);
+    }
+
+    private String buildInfoIssueContent(Issue issue) {
+        if (issue == null) {
+            return "";
+        }
+        String eventCode = issue.getType() == null ? "" : issue.getType().trim();
+        if (!eventCode.isBlank() && !"UNKNOWN".equalsIgnoreCase(eventCode)) {
+            return eventCode;
+        }
+        return buildIssueContent(issue);
     }
 
     private String buildIssueContent(Issue issue) {
@@ -978,11 +989,11 @@ public class MailQueueService {
         return systemLevel;
     }
 
-    private List<IssueGroup> buildIssueGroups(DSystem dSystem) {
-        return List.of(buildIssueGroup(dSystem));
+    private List<IssueGroup> buildIssueGroups(DSystem dSystem, JsonNode content) {
+        return List.of(buildIssueGroup(dSystem, content));
     }
 
-    private IssueGroup buildIssueGroup(DSystem dSystem) {
+    private IssueGroup buildIssueGroup(DSystem dSystem, JsonNode content) {
         Long systemId = dSystem == null ? null : dSystem.getSystemId();
         Long alertId = systemId == null ? null : findLatestAlertId(systemId).orElse(null);
         return new IssueGroup(
@@ -990,9 +1001,27 @@ public class MailQueueService {
                 "NULL",
                 dSystem == null ? "" : dSystem.getCustomerName(),
                 dSystem == null ? "" : getDisplaySystemName(dSystem),
-                "NULL",
+                buildAlertIssueContent(content),
                 dSystem == null ? "" : dSystem.getManager()
         );
+    }
+
+    private String buildAlertIssueContent(JsonNode content) {
+        String title = readText(content, "title", "");
+        if (title != null && !title.isBlank()) {
+            return title;
+        }
+
+        JsonNode issues = getIssueArray(content);
+        if (issues != null && issues.isArray()) {
+            for (JsonNode issue : issues) {
+                title = readText(issue, "title", "");
+                if (title != null && !title.isBlank()) {
+                    return title;
+                }
+            }
+        }
+        return "NULL";
     }
 
     private Optional<Long> findLatestAlertId(Long systemId) {
