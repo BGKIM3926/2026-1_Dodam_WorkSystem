@@ -374,10 +374,17 @@ public class MailQueueService {
     }
 
     private String readFirstIssueKey(SavedReport savedReport) {
-        if (savedReport == null || savedReport.reportJson() == null) {
+        JsonNode content = readContentNode(savedReport);
+        if (content == null) {
             return "";
         }
-        JsonNode issues = getIssueArray(savedReport.reportJson());
+
+        String singleIssueKey = readText(content, "issuekey", "");
+        if (singleIssueKey != null && !singleIssueKey.isBlank()) {
+            return singleIssueKey.trim();
+        }
+
+        JsonNode issues = getIssueArray(content);
         if (issues == null || !issues.isArray()) {
             return "";
         }
