@@ -46,7 +46,7 @@ public class MailQueueService {
     private static final int MAX_BODY_LENGTH = 65535;
     private static final String INFO_MAIL_SUBJECT = "시스템 점검 결과 안내";
     private static final String ALERT_MAIL_SUBJECT = "시스템 ALERT 발생";
-    private static final String FIXED_TO_EMAILS = "enek4444@naver.com;kjh@dodamsol.kro.kr";
+    private static final String FIXED_TO_EMAILS = "enek4444@naver.com;kjh@dodamsol.kro.kr;sanghyun9727@dodamsol.co.kr";
     private static final String VIEW_ALERT_BASE_URL = "http://dodam.tplinkdns.com:28080";
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter FILE_TIME_FORMAT =
