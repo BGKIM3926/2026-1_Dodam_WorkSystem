@@ -39,6 +39,12 @@ public class InfoController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 
+    @PostMapping("/test")
+    public ResponseEntity<MailResponseDto> writeDailySummaryForTest() {
+        MailResponseDto response = mailQueueService.writeDailyInfoSummaryQueueFileNow();
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
     private MailRequestDto toMailRequest(JsonNode payload) {
         if (payload == null || payload.isNull()) {
             throw new IllegalArgumentException("요청 본문이 필요합니다.");

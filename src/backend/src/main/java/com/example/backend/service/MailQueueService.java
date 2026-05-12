@@ -135,12 +135,17 @@ public class MailQueueService {
     @Scheduled(cron = "0 59 8 * * *", zone = "Asia/Seoul")
     @Transactional(readOnly = true)
     public void writeDailyInfoSummaryQueueFile() {
+        writeDailyInfoSummaryQueueFileNow();
+    }
+
+    @Transactional(readOnly = true)
+    public MailResponseDto writeDailyInfoSummaryQueueFileNow() {
         LocalDate operationDate = LocalDate.now(KOREA_ZONE);
         LocalDateTime periodStart = operationDate.minusDays(1).atTime(SUMMARY_PERIOD_TIME);
         LocalDateTime periodEnd = operationDate.atTime(SUMMARY_PERIOD_TIME);
         List<Info> infos = infoRepository.findByTimeGreaterThanEqualAndTimeLessThanOrderByTimeAsc(periodStart, periodEnd);
         if (infos.isEmpty()) {
-            return;
+            return new MailResponseDto(UUID.randomUUID().toString(), "NO_INFO_DATA");
         }
 
         DailyInfoSummary summary = summarizeInfos(infos);
@@ -150,6 +155,7 @@ public class MailQueueService {
 
         try {
             writeDailySummaryQueueFile(FIXED_TO_EMAILS, "", subject, html);
+            return new MailResponseDto(UUID.randomUUID().toString(), "FILE_WRITTEN");
         } catch (IOException e) {
             throw new IllegalStateException("일일 점검 결과 메일 큐 파일 저장에 실패했습니다.");
         }
