@@ -141,8 +141,8 @@ public class MailQueueService {
     @Transactional(readOnly = true)
     public MailResponseDto writeDailyInfoSummaryQueueFileNow() {
         LocalDate operationDate = LocalDate.now(KOREA_ZONE);
-        LocalDateTime periodStart = operationDate.minusDays(1).atTime(SUMMARY_PERIOD_TIME);
-        LocalDateTime periodEnd = operationDate.atTime(SUMMARY_PERIOD_TIME);
+        LocalDateTime periodStart = operationDate.atTime(SUMMARY_PERIOD_TIME);
+        LocalDateTime periodEnd = periodStart.plusMinutes(1);
         List<Info> infos = infoRepository.findByTimeGreaterThanEqualAndTimeLessThanOrderByTimeAsc(periodStart, periodEnd);
         if (infos.isEmpty()) {
             return new MailResponseDto(UUID.randomUUID().toString(), "NO_INFO_DATA");
