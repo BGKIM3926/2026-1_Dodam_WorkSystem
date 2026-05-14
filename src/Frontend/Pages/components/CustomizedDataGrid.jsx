@@ -139,8 +139,15 @@ export default function CustomizedDataGrid() {
     display: 'flex',
     gap: 1,
     mb: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: { xs: 'column', sm: 'row' },
+  };
+
+  const editFieldLabelSx = {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: 'text.secondary',
+    mb: 0.75,
   };
 
   const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))];
@@ -1018,20 +1025,32 @@ export default function CustomizedDataGrid() {
         <DialogTitle>고객 정보 수정</DialogTitle>
         <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Box sx={responsiveFormGridSx}>
-            <TextField label="하드웨어명" size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
-            <TextField label="OS명" size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
-            <TextField label="IP" size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
-            <TextField
-              label="담당자"
-              size="small"
-              value={editForm.manager || ''}
-              onChange={(e) => handleEditFormChange('manager', e.target.value)}
-              inputProps={{ maxLength: 10 }}
-            />
+            <Box>
+              <Typography sx={editFieldLabelSx}>하드웨어명</Typography>
+              <TextField fullWidth size="small" value={editForm.hardwareName || ''} onChange={(e) => handleEditFormChange('hardwareName', e.target.value)} />
+            </Box>
+            <Box>
+              <Typography sx={editFieldLabelSx}>OS명</Typography>
+              <TextField fullWidth size="small" value={editForm.osName || ''} onChange={(e) => handleEditFormChange('osName', e.target.value)} />
+            </Box>
+            <Box>
+              <Typography sx={editFieldLabelSx}>IP</Typography>
+              <TextField fullWidth size="small" value={editForm.osIp || ''} onChange={(e) => handleEditFormChange('osIp', e.target.value)} />
+            </Box>
+            <Box>
+              <Typography sx={editFieldLabelSx}>담당자</Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={editForm.manager || ''}
+                onChange={(e) => handleEditFormChange('manager', e.target.value)}
+                inputProps={{ maxLength: 10 }}
+              />
+            </Box>
           </Box>
           <Box sx={{ mt: 2 }}>
+            <Typography sx={editFieldLabelSx}>하드웨어 정보</Typography>
             <TextField
-              label="하드웨어 정보"
               size="small"
               fullWidth
               multiline
@@ -1042,8 +1061,8 @@ export default function CustomizedDataGrid() {
             />
           </Box>
           <Box sx={{ mt: 2 }}>
+            <Typography sx={editFieldLabelSx}>OS 정보</Typography>
             <TextField
-              label="OS 정보"
               size="small"
               fullWidth
               multiline
@@ -1063,12 +1082,27 @@ export default function CustomizedDataGrid() {
 
           {editAccounts.map((acc, idx) => (
             <Box key={acc._key ?? idx} sx={accountRowSx}>
-              <TextField label="구분" size="small" fullWidth value={acc.systemType || ''} onChange={(e) => handleAccountChange(idx, 'systemType', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="접속방식" size="small" fullWidth value={acc.accessType || ''} onChange={(e) => handleAccountChange(idx, 'accessType', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="포트" size="small" fullWidth value={acc.portNumber || ''} onChange={(e) => handleAccountChange(idx, 'portNumber', e.target.value)} sx={{ flex: 0.7 }} />
-              <TextField label="계정명" size="small" fullWidth value={acc.accountId || ''} onChange={(e) => handleAccountChange(idx, 'accountId', e.target.value)} sx={{ flex: 1 }} />
-              <TextField label="패스워드" size="small" fullWidth value={acc.accountPw || ''} onChange={(e) => handleAccountChange(idx, 'accountPw', e.target.value)} sx={{ flex: 1 }} />
-              <IconButton size="small" color="error" onClick={() => handleRemoveAccount(idx)}>
+              <Box sx={{ flex: 1, width: '100%' }}>
+                <Typography sx={editFieldLabelSx}>구분</Typography>
+                <TextField size="small" fullWidth value={acc.systemType || ''} onChange={(e) => handleAccountChange(idx, 'systemType', e.target.value)} />
+              </Box>
+              <Box sx={{ flex: 1, width: '100%' }}>
+                <Typography sx={editFieldLabelSx}>접속방식</Typography>
+                <TextField size="small" fullWidth value={acc.accessType || ''} onChange={(e) => handleAccountChange(idx, 'accessType', e.target.value)} />
+              </Box>
+              <Box sx={{ flex: 0.7, width: '100%' }}>
+                <Typography sx={editFieldLabelSx}>포트</Typography>
+                <TextField size="small" fullWidth value={acc.portNumber || ''} onChange={(e) => handleAccountChange(idx, 'portNumber', e.target.value)} />
+              </Box>
+              <Box sx={{ flex: 1, width: '100%' }}>
+                <Typography sx={editFieldLabelSx}>계정명</Typography>
+                <TextField size="small" fullWidth value={acc.accountId || ''} onChange={(e) => handleAccountChange(idx, 'accountId', e.target.value)} />
+              </Box>
+              <Box sx={{ flex: 1, width: '100%' }}>
+                <Typography sx={editFieldLabelSx}>패스워드</Typography>
+                <TextField size="small" fullWidth value={acc.accountPw || ''} onChange={(e) => handleAccountChange(idx, 'accountPw', e.target.value)} />
+              </Box>
+              <IconButton size="small" color="error" onClick={() => handleRemoveAccount(idx)} sx={{ mt: { xs: 0, sm: 3 } }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
             </Box>
