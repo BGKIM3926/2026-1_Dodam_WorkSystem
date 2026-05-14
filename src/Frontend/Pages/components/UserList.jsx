@@ -53,6 +53,12 @@ export default function UsersList({ rows, fetchUsers }) {
         fetchUsers();
     };
 
+    const fieldLabelSx = {
+        fontSize: '13px',
+        fontWeight: 600,
+        mb: 0.75,
+    };
+
     return (
         <Grid container spacing={{ xs: 2, md: 4 }} columns={16} sx={{ justifyContent: 'flex-start' }}>
             {rows.map((row) => (
@@ -104,47 +110,55 @@ export default function UsersList({ rows, fetchUsers }) {
             <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="xs">
                 <DialogTitle>사용자 수정</DialogTitle>
 
-                <DialogContent>
-                    <TextField
-                        fullWidth
-                        margin="dense"
-                        label="이름"
-                        value={form.name || ''}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    />
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box>
+                        <Typography sx={fieldLabelSx}>이름</Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            value={form.name || ''}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        />
+                    </Box>
 
-                    <TextField
-                        fullWidth
-                        margin="dense"
-                        label="이메일"
-                        type="email"
-                        value={form.email || ''}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
+                    <Box>
+                        <Typography sx={fieldLabelSx}>이메일</Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            type="email"
+                            value={form.email || ''}
+                            onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        />
+                    </Box>
 
-                    <TextField
-                        fullWidth
-                        margin="dense"
-                        label="비밀번호"
-                        type="password"
-                        autoComplete="new-password"
-                        value={form.password || ''}
-                        onChange={(e) => setForm({ ...form, password: e.target.value })}
-                        helperText="비워두면 변경되지 않음"
-                    />
+                    <Box>
+                        <Typography sx={fieldLabelSx}>비밀번호</Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            type="password"
+                            autoComplete="new-password"
+                            placeholder="비워두면 변경되지 않음"
+                            value={form.password || ''}
+                            onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        />
+                    </Box>
 
-                    <TextField
-                        select
-                        fullWidth
-                        margin="dense"
-                        label="권한"
-                        value={form.role || ''}
-                        onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    >
-                        <MenuItem value="관리자">관리자</MenuItem>
-                        <MenuItem value="팀장">팀장</MenuItem>
-                        <MenuItem value="일반사용자">일반사용자</MenuItem>
-                    </TextField>
+                    <Box>
+                        <Typography sx={fieldLabelSx}>권한</Typography>
+                        <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            value={form.role || ''}
+                            onChange={(e) => setForm({ ...form, role: e.target.value })}
+                        >
+                            <MenuItem value="관리자">관리자</MenuItem>
+                            <MenuItem value="팀장">팀장</MenuItem>
+                            <MenuItem value="일반사용자">일반사용자</MenuItem>
+                        </TextField>
+                    </Box>
                 </DialogContent>
 
                 <DialogActions>
