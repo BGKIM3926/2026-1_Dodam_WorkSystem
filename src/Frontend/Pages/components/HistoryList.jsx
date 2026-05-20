@@ -23,7 +23,7 @@ import { koKR } from '@mui/x-data-grid/locales';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 const WORK_TYPE = {
     INSPECTION: '정기점검',
@@ -38,6 +38,7 @@ const textareaSx = {
     '& .MuiOutlinedInput-root': {
         borderRadius: '8px',
         minHeight: '220px',
+        height: 'auto',
         alignItems: 'flex-start',
     },
     '& .MuiOutlinedInput-input': {
@@ -45,7 +46,43 @@ const textareaSx = {
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
     },
+    '& .MuiInputBase-inputMultiline': {
+        overflow: 'hidden !important',
+        resize: 'none',
+    },
 };
+
+function AutoResizeTextField({ value, onChange, sx, ...props }) {
+    const inputRef = useRef(null);
+
+    const resizeTextarea = () => {
+        const input = inputRef.current;
+        if (!input) {
+            return;
+        }
+
+        input.style.height = 'auto';
+        input.style.height = `${input.scrollHeight}px`;
+    };
+
+    useLayoutEffect(() => {
+        resizeTextarea();
+    }, [value]);
+
+    return (
+        <TextField
+            {...props}
+            multiline
+            value={value}
+            onChange={(event) => {
+                onChange?.(event);
+                requestAnimationFrame(resizeTextarea);
+            }}
+            inputRef={inputRef}
+            sx={sx}
+        />
+    );
+}
 
 function buildAttachmentQuery(retainedAttachments) {
     const params = new URLSearchParams();
@@ -239,7 +276,7 @@ function SubHistoryPanel({ historyId, expanded }) {
                         {editingSubId === sub.subId ? (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                 <TextField size="small" label="내용" fullWidth value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} />
-                                <TextField size="small" label="내용 상세" fullWidth multiline minRows={8} value={editForm.contentDetail} onChange={(e) => setEditForm({ ...editForm, contentDetail: e.target.value })} sx={textareaSx} />
+                                <AutoResizeTextField size="small" label="내용 상세" fullWidth minRows={8} value={editForm.contentDetail} onChange={(e) => setEditForm({ ...editForm, contentDetail: e.target.value })} sx={textareaSx} />
                                 <AttachmentEditor retainedAttachments={retainedAttachments} setRetainedAttachments={setRetainedAttachments} editFiles={editFiles} setEditFiles={setEditFiles} />
                                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                                     <Button size="small" onClick={resetSubEdit}>취소</Button>
@@ -269,7 +306,7 @@ function SubHistoryPanel({ historyId, expanded }) {
                         <Typography variant="subtitle2" sx={{ mb: 1.5 }}>진행사항 추가</Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             <TextField size="small" label="내용" fullWidth value={subForm.content} onChange={(e) => setSubForm({ ...subForm, content: e.target.value })} />
-                            <TextField size="small" label="내용 상세" fullWidth multiline minRows={8} value={subForm.contentDetail} onChange={(e) => setSubForm({ ...subForm, contentDetail: e.target.value })} sx={textareaSx} />
+                            <AutoResizeTextField size="small" label="내용 상세" fullWidth minRows={8} value={subForm.contentDetail} onChange={(e) => setSubForm({ ...subForm, contentDetail: e.target.value })} sx={textareaSx} />
                             <Paper onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} sx={{ p: 2, textAlign: 'center', border: '2px dashed #ccc', cursor: 'pointer' }}>
                                 <CloudUploadIcon fontSize="small" />
                                 <Typography variant="body2">파일을 드래그하거나 클릭해서 업로드</Typography>
@@ -614,11 +651,10 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                                 <TextField fullWidth margin="dense" label="작업 유형" value={form.workType || ''} InputProps={{ readOnly: true }} />
                                 <TextField fullWidth margin="dense" label="내용" value={form.issue || ''} onChange={(e) => setForm({ ...form, issue: e.target.value })} />
                                 {form.workType !== WORK_TYPE.INSPECTION && (
-                                    <TextField
+                                    <AutoResizeTextField
                                         fullWidth
                                         margin="dense"
                                         label="내용 상세"
-                                        multiline
                                         minRows={10}
                                         value={form.issueDetail || ''}
                                         onChange={(e) => setForm({ ...form, issueDetail: e.target.value })}
