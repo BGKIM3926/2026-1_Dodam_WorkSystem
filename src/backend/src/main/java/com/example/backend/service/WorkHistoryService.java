@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -104,6 +105,7 @@ public class WorkHistoryService {
     }
 
     public MaintenanceHistory create(MaintenanceHistory history) {
+        normalizeAndValidateVisitDate(history);
         validateCreateRequest(history);
 
         if (history.getServiceId() != null && legacyServiceRepository.existsById(history.getServiceId())) {
@@ -126,6 +128,7 @@ public class WorkHistoryService {
     }
 
     public MaintenanceHistory save(MaintenanceHistory history) {
+        normalizeAndValidateVisitDate(history);
         return repository.save(history);
     }
 
@@ -203,6 +206,17 @@ public class WorkHistoryService {
             if (history.getConstructionStartDate() == null || history.getConstructionEndDate() == null) {
                 throw new IllegalStateException("구축기간(시작일/종료일)을 모두 선택해 주세요.");
             }
+        }
+    }
+
+    private void normalizeAndValidateVisitDate(MaintenanceHistory history) {
+        if (history.getVisitDate() == null) {
+            history.setVisitDate(LocalDate.now());
+            return;
+        }
+
+        if (history.getVisitDate().isAfter(LocalDate.now())) {
+            throw new IllegalStateException("현재 이후의 날짜는 선택할 수 없습니다");
         }
     }
 

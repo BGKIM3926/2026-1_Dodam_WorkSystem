@@ -4,6 +4,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelectedNode } from '../../Contexts/SelectedNodeContext';
 import WorkHistoryForm from './WorkHistoryForm';
 
+const getTodayString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export default function CreateWorkHistory() {
     const REGULAR_CHECK = '정기점검';
     const FAULT_RESPONSE = '장애조치';
@@ -18,6 +26,7 @@ export default function CreateWorkHistory() {
         workType: '',
         issue: '',
         systemIds: [],
+        visitDate: getTodayString(),
     });
 
     const [files, setFiles] = useState([]);
@@ -100,6 +109,16 @@ export default function CreateWorkHistory() {
 
         if (!isRegularCheck && (!form.systemIds || form.systemIds.length === 0)) {
             setSnackbar({ open: true, message: '시스템을 선택해 주세요.', severity: 'warning' });
+            return;
+        }
+
+        if (!form.visitDate) {
+            setSnackbar({ open: true, message: '방문일을 선택해 주세요.', severity: 'warning' });
+            return;
+        }
+
+        if (form.visitDate > getTodayString()) {
+            setSnackbar({ open: true, message: '현재 이후의 날짜는 선택할 수 없습니다', severity: 'warning' });
             return;
         }
 
@@ -195,6 +214,7 @@ export default function CreateWorkHistory() {
                 systems={systems}
                 files={files}
                 setFiles={setFiles}
+                onFutureVisitDate={() => setSnackbar({ open: true, message: '현재 이후의 날짜는 선택할 수 없습니다', severity: 'warning' })}
             />
         </Box>
     );

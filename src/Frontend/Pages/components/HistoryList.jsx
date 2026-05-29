@@ -5,6 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
+    Alert,
     Box,
     Button,
     Collapse,
@@ -14,6 +15,7 @@ import {
     DialogTitle,
     IconButton,
     Paper,
+    Snackbar,
     TextField,
     Typography,
     useMediaQuery,
@@ -346,9 +348,14 @@ function SubHistoryPanel({ historyId, expanded }) {
                         {selectedSub && (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <Typography><b>내용:</b> {selectedSub.content}</Typography>
-                                {selectedSub.contentDetail && <Typography sx={{ whiteSpace: 'pre-wrap' }}><b>내용 상세:</b> {selectedSub.contentDetail}</Typography>}
+                                {selectedSub.contentDetail && (
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 700 }}>내용 상세</Typography>
+                                        <Typography sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>{selectedSub.contentDetail}</Typography>
+                                    </Box>
+                                )}
                                 <Typography><b>등록일:</b> {selectedSub.createdAt ? dayjs(selectedSub.createdAt).format('YYYY-MM-DD HH:mm') : '-'}</Typography>
-                                <Typography><b>첨부파일:</b></Typography>
+                                <Typography sx={{ fontWeight: 700 }}>첨부파일</Typography>
                                 <AttachmentPreviewList attachments={selectedSub.attachments} />
                             </Box>
                         )}
@@ -370,7 +377,9 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
     const [expandedRows, setExpandedRows] = useState({});
     const [editFiles, setEditFiles] = useState([]);
     const [retainedAttachments, setRetainedAttachments] = useState([]);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
     const isMobile = useMediaQuery('(max-width:900px)');
+    const today = dayjs().startOf('day');
 
     const toggleExpand = (rowId) => {
         setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -398,6 +407,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
             ...row,
             issue: row.issue || '',
             issueDetail: row.issueDetail || '',
+            visitDate: row.visitDate || null,
             constructionStartDate: row.constructionStartDate || null,
             constructionEndDate: row.constructionEndDate || null,
         });
@@ -518,6 +528,17 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                 : isManagerView
                     ? managerColumns
                     : defaultColumns;
+
+    const handleVisitDateChange = (newValue) => {
+        if (newValue && newValue.startOf('day').isAfter(today)) {
+            setSnackbar({ open: true, message: '현재 이후의 날짜는 선택할 수 없습니다', severity: 'warning' });
+            setForm((prev) => ({ ...prev, visitDate: null }));
+            return;
+        }
+
+        setForm((prev) => ({ ...prev, visitDate: newValue ? newValue.format('YYYY-MM-DD') : null }));
+    };
+
     const handleUpdate = async () => {
         if (
             !isManagerView &&
@@ -525,6 +546,16 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
             !form.completedDate
         ) {
             alert('장애조치와 기술지원 이력은 완료일이 필요합니다.');
+            return;
+        }
+
+        if (!isManagerView && !form.visitDate) {
+            setSnackbar({ open: true, message: '방문일을 선택해 주세요.', severity: 'warning' });
+            return;
+        }
+
+        if (!isManagerView && form.visitDate > dayjs().format('YYYY-MM-DD')) {
+            setSnackbar({ open: true, message: '현재 이후의 날짜는 선택할 수 없습니다', severity: 'warning' });
             return;
         }
 
@@ -545,6 +576,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                     issue: form.issue,
                     issueDetail: form.workType === WORK_TYPE.INSPECTION ? null : form.issueDetail,
                     equipment: form.equipment,
+                    visitDate: form.visitDate,
                     completedDate: form.completedDate,
                     constructionStartDate: form.constructionStartDate,
                     constructionEndDate: form.constructionEndDate,
@@ -587,6 +619,20 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
 
     return (
         <>
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+                    severity={snackbar.severity}
+                    variant="filled"
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
             <Box sx={{ width: '100%', overflowX: 'auto' }}>
                 <DataGrid
                     rows={displayRows}
@@ -649,6 +695,16 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                         ) : (
                             <>
                                 <TextField fullWidth margin="dense" label="작업 유형" value={form.workType || ''} InputProps={{ readOnly: true }} />
+                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                    <DatePicker
+                                        label="방문일"
+                                        value={form.visitDate ? dayjs(form.visitDate) : null}
+                                        onChange={handleVisitDateChange}
+                                        maxDate={today}
+                                        format="YYYY-MM-DD"
+                                        slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
+                                    />
+                                </LocalizationProvider>
                                 <TextField fullWidth margin="dense" label="내용" value={form.issue || ''} onChange={(e) => setForm({ ...form, issue: e.target.value })} />
                                 {form.workType !== WORK_TYPE.INSPECTION && (
                                     <AutoResizeTextField
@@ -724,8 +780,13 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                                 {selectedRow.workType !== WORK_TYPE.CONSTRUCTION && selectedRow.workType !== WORK_TYPE.INSPECTION && <Typography><b>완료일:</b> {selectedRow.completedDate || '-'}</Typography>}
                                 {selectedRow.workType === WORK_TYPE.CONSTRUCTION && <Typography><b>구축기간:</b> {selectedRow.constructionStartDate || '-'} ~ {selectedRow.constructionEndDate || '-'}</Typography>}
                                 <Typography><b>내용:</b> {selectedRow.issue}</Typography>
-                                {selectedRow.issueDetail && <Typography sx={{ whiteSpace: 'pre-wrap' }}><b>내용 상세:</b> {selectedRow.issueDetail}</Typography>}
-                                <Typography><b>첨부파일:</b></Typography>
+                                {selectedRow.issueDetail && (
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 700 }}>내용 상세</Typography>
+                                        <Typography sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>{selectedRow.issueDetail}</Typography>
+                                    </Box>
+                                )}
+                                <Typography sx={{ fontWeight: 700 }}>첨부파일</Typography>
                                 <AttachmentPreviewList attachments={selectedRow.attachments} />
                             </Box>
                         )}

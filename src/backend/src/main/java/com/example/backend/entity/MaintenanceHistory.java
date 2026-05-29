@@ -2,13 +2,12 @@ package com.example.backend.entity;
 
 import java.time.LocalDate;
 
-import org.hibernate.annotations.CreationTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,8 +30,7 @@ public class MaintenanceHistory {
 
     private String serviceName;
 
-    @CreationTimestamp
-    @Column(name = "visit_date", updatable = false)
+    @Column(name = "visit_date")
     private LocalDate visitDate;
 
     private String workerId;
@@ -60,4 +58,11 @@ public class MaintenanceHistory {
     private LocalDate constructionEndDate;
 
     private String createdBy;
+
+    @PrePersist
+    public void prePersist() {
+        if (visitDate == null) {
+            visitDate = LocalDate.now();
+        }
+    }
 }

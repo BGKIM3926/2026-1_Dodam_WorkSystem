@@ -160,10 +160,21 @@ const styles = {
     },
 };
 
-export default function WorkHistoryForm({ form, setForm, onSubmit, systems, files, setFiles }) {
+export default function WorkHistoryForm({ form, setForm, onSubmit, systems, files, setFiles, onFutureVisitDate }) {
     const navigate = useNavigate();
 
     const workTypeOptions = ['정기점검', '장애조치', '기술지원', '구축'];
+    const today = dayjs().startOf('day');
+
+    const handleVisitDateChange = (newValue) => {
+        if (newValue && newValue.startOf('day').isAfter(today)) {
+            onFutureVisitDate?.();
+            setForm({ ...form, visitDate: null });
+            return;
+        }
+
+        setForm({ ...form, visitDate: newValue ? newValue.format('YYYY-MM-DD') : null });
+    };
 
     const handleDrop = (e) => {
         e.preventDefault();
@@ -266,6 +277,26 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                         </FormControl>
                     </Box>
                 )}
+
+                {/* 방문일 */}
+                <Box>
+                    <Typography sx={styles.fieldLabel}>방문일</Typography>
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                            value={form.visitDate ? dayjs(form.visitDate) : null}
+                            onChange={handleVisitDateChange}
+                            maxDate={today}
+                            format="YYYY-MM-DD"
+                            slotProps={{
+                                textField: {
+                                    fullWidth: true,
+                                    placeholder: '방문일 선택',
+                                    sx: styles.fieldInput
+                                }
+                            }}
+                        />
+                    </LocalizationProvider>
+                </Box>
 
                 {/* 내용 */}
                 <Box>

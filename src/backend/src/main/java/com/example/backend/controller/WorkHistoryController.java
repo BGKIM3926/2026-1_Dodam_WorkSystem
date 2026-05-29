@@ -99,6 +99,7 @@ public class WorkHistoryController {
         history.setWorkType(request.getWorkType());
         history.setIssue(request.getIssue());
         history.setEquipment(request.getEquipment());
+        history.setVisitDate(request.getVisitDate());
         history.setCompletedDate(request.getCompletedDate());
         history.setConstructionStartDate(request.getConstructionStartDate());
         history.setConstructionEndDate(request.getConstructionEndDate());
@@ -118,6 +119,7 @@ public class WorkHistoryController {
         history.setIssue(request.getIssue());
         history.setIssueDetail(request.getIssueDetail());
         history.setEquipment(request.getEquipment());
+        history.setVisitDate(request.getVisitDate());
         history.setCompletedDate(request.getCompletedDate());
         history.setConstructionStartDate(request.getConstructionStartDate());
         history.setConstructionEndDate(request.getConstructionEndDate());
