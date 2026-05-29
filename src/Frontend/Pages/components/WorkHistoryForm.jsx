@@ -81,7 +81,7 @@ const styles = {
             borderRadius: '8px',
             border: '1.5px solid #e4e4e7',
             fontSize: '15px',
-            minHeight: '420px',
+            alignItems: 'flex-start',
             '&:hover': {
                 borderColor: '#d4d4d8',
             },
@@ -100,6 +100,10 @@ const styles = {
                 color: '#a1a1aa',
                 opacity: 1,
             },
+        },
+        '& .MuiInputBase-inputMultiline': {
+            overflow: 'hidden !important',
+            resize: 'none',
         },
     },
     selectInput: {
@@ -320,8 +324,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                             fullWidth
                             placeholder="작업 내용을 자세히 입력하세요"
                             multiline
-                            minRows={15}
-                            maxRows={Infinity}
+                            minRows={4}
                             value={form.issueDetail || ''}
                             onChange={(e) =>
                                 setForm({ ...form, issueDetail: e.target.value })

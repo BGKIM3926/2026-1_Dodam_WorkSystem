@@ -695,16 +695,6 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                         ) : (
                             <>
                                 <TextField fullWidth margin="dense" label="작업 유형" value={form.workType || ''} InputProps={{ readOnly: true }} />
-                                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                    <DatePicker
-                                        label="방문일"
-                                        value={form.visitDate ? dayjs(form.visitDate) : null}
-                                        onChange={handleVisitDateChange}
-                                        maxDate={today}
-                                        format="YYYY-MM-DD"
-                                        slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
-                                    />
-                                </LocalizationProvider>
                                 <TextField fullWidth margin="dense" label="내용" value={form.issue || ''} onChange={(e) => setForm({ ...form, issue: e.target.value })} />
                                 {form.workType !== WORK_TYPE.INSPECTION && (
                                     <AutoResizeTextField
@@ -717,6 +707,17 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
                                         sx={textareaSx}
                                     />
                                 )}
+
+                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                    <DatePicker
+                                        label="방문일"
+                                        value={form.visitDate ? dayjs(form.visitDate) : null}
+                                        onChange={handleVisitDateChange}
+                                        maxDate={today}
+                                        format="YYYY-MM-DD"
+                                        slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
+                                    />
+                                </LocalizationProvider>
 
                                 {(form.workType === WORK_TYPE.FAULT || form.workType === WORK_TYPE.SUPPORT) && (
                                     <LocalizationProvider dateAdapter={AdapterDayjs}>
