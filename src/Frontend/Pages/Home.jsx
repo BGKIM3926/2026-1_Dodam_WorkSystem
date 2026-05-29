@@ -110,6 +110,29 @@ export default function Home() {
         navigate(`/dashboard/workhistory?${params.toString()}`);
     };
 
+    const handleRecentHistoryRowClick = (item) => {
+        const customerName = item.region;
+        const serviceName = item.serviceName;
+        const workType = item.workType;
+        const historyId = item.historyId;
+
+        if (!customerName || !serviceName || !workType) return;
+
+        setSelectedNode({ customerName, serviceName });
+
+        const params = new URLSearchParams({
+            customerName,
+            serviceName,
+            workType,
+        });
+
+        if (historyId) {
+            params.set('historyId', String(historyId));
+        }
+
+        navigate(`/dashboard/workhistory?${params.toString()}`);
+    };
+
     const handleSiteChange = (event) => {
         setSelectedSite(event.target.value);
         setInspectionPage(1);
@@ -301,7 +324,14 @@ export default function Home() {
                                 <ListItem
                                     key={item.historyId}
                                     divider={idx < recentHistory.length - 1}
-                                    sx={{ px: { xs: 2, md: 3 }, py: 1.5, alignItems: 'center' }}
+                                    onClick={() => handleRecentHistoryRowClick(item)}
+                                    sx={{
+                                        px: { xs: 2, md: 3 },
+                                        py: 1.5,
+                                        alignItems: 'center',
+                                        cursor: item.region && item.serviceName && item.workType ? 'pointer' : 'default',
+                                        '&:hover': { backgroundColor: 'action.hover' },
+                                    }}
                                 >
                                     <ListItemIcon sx={{ minWidth: 36, mr: 1 }}>
                                         {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}

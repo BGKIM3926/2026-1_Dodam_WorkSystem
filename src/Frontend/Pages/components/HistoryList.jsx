@@ -368,7 +368,7 @@ function SubHistoryPanel({ historyId, expanded }) {
         </Collapse>
     );
 }
-export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
+export default function HistoryList({ rows, isGlobalView, onRefresh, filter, targetHistoryId }) {
     const [openEdit, setOpenEdit] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
     const [selectedRow, setSelectedRow] = useState(null);
@@ -378,6 +378,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
     const [editFiles, setEditFiles] = useState([]);
     const [retainedAttachments, setRetainedAttachments] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
+    const lastOpenedTargetRef = useRef(null);
     const isMobile = useMediaQuery('(max-width:900px)');
     const today = dayjs().startOf('day');
 
@@ -400,6 +401,21 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter }) {
             return bDate - aDate;
         });
     }, [isManagerView, rows]);
+
+    useEffect(() => {
+        if (!targetHistoryId || isManagerView || lastOpenedTargetRef.current === targetHistoryId) {
+            return;
+        }
+
+        const targetRow = displayRows.find((row) => String(row.historyId) === String(targetHistoryId));
+        if (!targetRow) {
+            return;
+        }
+
+        setSelectedRow(targetRow);
+        setOpenDetail(true);
+        lastOpenedTargetRef.current = targetHistoryId;
+    }, [targetHistoryId, displayRows, isManagerView]);
 
     const handleOpenEdit = (row) => {
         setSelectedRow(row);

@@ -23,6 +23,8 @@ export default function WorkHistory() {
     const [isLegacyService, setIsLegacyService] = useState(false);
     const customerNameFromQuery = searchParams.get('customerName');
     const serviceNameFromQuery = searchParams.get('serviceName');
+    const workTypeFromQuery = searchParams.get('workType');
+    const historyIdFromQuery = searchParams.get('historyId');
     const customerName = selectedNode?.customerName ?? customerNameFromQuery;
     const serviceName = selectedNode?.serviceName ?? serviceNameFromQuery;
     const effectiveSelectedNode = customerName && serviceName
@@ -88,13 +90,27 @@ export default function WorkHistory() {
     });
 
     useEffect(() => {
-        if (!selectedNode?.serviceName && customerNameFromQuery && serviceNameFromQuery) {
+        if (
+            customerNameFromQuery &&
+            serviceNameFromQuery &&
+            (
+                selectedNode?.customerName !== customerNameFromQuery ||
+                selectedNode?.serviceName !== serviceNameFromQuery
+            )
+        ) {
             setSelectedNode({
                 customerName: customerNameFromQuery,
                 serviceName: serviceNameFromQuery,
             });
         }
-    }, [selectedNode?.serviceName, customerNameFromQuery, serviceNameFromQuery, setSelectedNode]);
+    }, [selectedNode?.customerName, selectedNode?.serviceName, customerNameFromQuery, serviceNameFromQuery, setSelectedNode]);
+
+    useEffect(() => {
+        const availableFilters = ['정기점검', '장애조치', '기술지원', '구축', '기관정보'];
+        if (workTypeFromQuery && availableFilters.includes(workTypeFromQuery)) {
+            setFilter(workTypeFromQuery);
+        }
+    }, [workTypeFromQuery]);
 
     useEffect(() => {
         fetchRows();
@@ -168,6 +184,7 @@ export default function WorkHistory() {
                             isGlobalView={isGlobalView} 
                             onRefresh={filter === '기관정보' ? fetchManagers : fetchRows} 
                             filter={filter} 
+                            targetHistoryId={historyIdFromQuery}
                         />
                     </>
                 )}
