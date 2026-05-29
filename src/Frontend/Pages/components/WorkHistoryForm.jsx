@@ -17,6 +17,7 @@ import {
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import { useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const styles = {
@@ -163,6 +164,38 @@ const styles = {
         },
     },
 };
+
+function AutoResizeTextField({ value, onChange, sx, ...props }) {
+    const inputRef = useRef(null);
+
+    const resizeTextarea = () => {
+        const input = inputRef.current;
+        if (!input) {
+            return;
+        }
+
+        input.style.height = 'auto';
+        input.style.height = `${input.scrollHeight}px`;
+    };
+
+    useLayoutEffect(() => {
+        resizeTextarea();
+    }, [value]);
+
+    return (
+        <TextField
+            {...props}
+            multiline
+            value={value}
+            onChange={(event) => {
+                onChange?.(event);
+                requestAnimationFrame(resizeTextarea);
+            }}
+            inputRef={inputRef}
+            sx={sx}
+        />
+    );
+}
 
 export default function WorkHistoryForm({ form, setForm, onSubmit, systems, files, setFiles, onFutureVisitDate }) {
     const navigate = useNavigate();
@@ -320,11 +353,10 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                 {form.workType !== '정기점검' && (
                     <Box>
                         <Typography sx={styles.fieldLabel}>내용 상세</Typography>
-                        <TextField
+                        <AutoResizeTextField
                             fullWidth
                             placeholder="작업 내용을 자세히 입력하세요"
-                            multiline
-                            minRows={4}
+                            minRows={15}
                             value={form.issueDetail || ''}
                             onChange={(e) =>
                                 setForm({ ...form, issueDetail: e.target.value })
