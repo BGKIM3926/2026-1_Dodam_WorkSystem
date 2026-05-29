@@ -82,6 +82,8 @@ const styles = {
             borderRadius: '8px',
             border: '1.5px solid #e4e4e7',
             fontSize: '15px',
+            minHeight: '420px',
+            height: 'auto',
             alignItems: 'flex-start',
             '&:hover': {
                 borderColor: '#d4d4d8',
@@ -165,7 +167,7 @@ const styles = {
     },
 };
 
-function AutoResizeTextField({ value, onChange, sx, ...props }) {
+function AutoResizeTextField({ value, onChange, sx, minTextareaHeight = 0, ...props }) {
     const inputRef = useRef(null);
 
     const resizeTextarea = () => {
@@ -175,7 +177,7 @@ function AutoResizeTextField({ value, onChange, sx, ...props }) {
         }
 
         input.style.height = 'auto';
-        input.style.height = `${input.scrollHeight}px`;
+        input.style.height = `${Math.max(input.scrollHeight, minTextareaHeight)}px`;
     };
 
     useLayoutEffect(() => {
@@ -357,6 +359,7 @@ export default function WorkHistoryForm({ form, setForm, onSubmit, systems, file
                             fullWidth
                             placeholder="작업 내용을 자세히 입력하세요"
                             minRows={15}
+                            minTextareaHeight={396}
                             value={form.issueDetail || ''}
                             onChange={(e) =>
                                 setForm({ ...form, issueDetail: e.target.value })
