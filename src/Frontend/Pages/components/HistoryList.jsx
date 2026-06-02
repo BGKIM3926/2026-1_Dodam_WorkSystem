@@ -602,7 +602,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
             headerName: '수신일',
             flex: 1,
             sortable: false,
-            valueGetter: (value, row) => (row.receivedAt ? dayjs(row.receivedAt).format('YYYY-MM-DD HH:mm:ss') : '-'),
+            valueGetter: (value, row) => (row.receivedAt ? dayjs(row.receivedAt).format('YYYY-MM-DD') : '-'),
         },
         reportActionColumn,
     ];

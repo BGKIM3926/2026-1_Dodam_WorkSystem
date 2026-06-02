@@ -25,6 +25,26 @@ export default function HistoryActions({
     const customerName = selectedNode?.customerName;
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+    const chipSx = {
+        flexShrink: 0,
+        height: 32,
+        fontSize: 13,
+        fontWeight: 600,
+        '& .MuiChip-label': {
+            px: 1.25,
+        },
+    };
+
+    const datePickerTextFieldSx = {
+        width: { xs: 136, md: 150, lg: 168 },
+        '& .MuiInputBase-root': {
+            height: 40,
+        },
+        '& .MuiInputBase-input': {
+            fontSize: 13,
+            px: 1.25,
+        },
+    };
 
     return (
         <>
@@ -45,74 +65,79 @@ export default function HistoryActions({
         <Box
             sx={{
                 display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
                 justifyContent: 'space-between',
-                alignItems: { xs: 'flex-start', md: 'center' },
+                alignItems: 'center',
                 width: '100%',
-                gap: 4
+                gap: { xs: 1, md: 1.5 },
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                pb: 0.5,
             }}
         >
             <Box
                 sx={{
-                    display: 'flex', 
-                    gap: 1, 
-                    flexWrap: { xs: 'wrap', md: 'nowrap' },
-                    overflowX: { xs: 'auto', md: 'visible' },
-                    width: '100%'
+                    display: 'flex',
+                    gap: 0.75,
+                    flexWrap: 'nowrap',
+                    flex: '1 1 auto',
+                    minWidth: 0,
                 }}
             >
                 <Chip 
                     onClick={() => setFilter('정기점검')} 
                     color={filter === '정기점검' ? 'primary' : 'default'}
-                    size="large" 
+                    size="small"
                     label="정기점검" 
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
                 <Chip
                     onClick={() => setFilter('장애조치')}
                     color={filter === '장애조치' ? 'primary' : 'default'}
-                    size="large"
+                    size="small"
                     label="장애조치"                    
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
                 <Chip
                     onClick={() => setFilter('기술지원')}
                     color={filter === '기술지원' ? 'primary' : 'default'}
-                    size="large"
+                    size="small"
                     label="기술지원"
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
                 <Chip
                     onClick={() => setFilter('구축')}
                     color={filter === '구축' ? 'primary' : 'default'}
-                    size="large"
+                    size="small"
                     label="구축"
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
                 <Chip
                     onClick={() => setFilter('기관정보')}
                     color={filter === '기관정보' ? 'primary' : 'default'}
-                    size="large"
+                    size="small"
                     label="기관정보"
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
                 <Chip
                     onClick={() => setFilter('점검서 관리')}
                     color={filter === '점검서 관리' ? 'primary' : 'default'}
-                    size="large"
+                    size="small"
                     label="점검서 관리"
-                    sx={{ flexShrink: 0 }}
+                    sx={chipSx}
                 />
             </Box>
             
             <Box
                 sx={{
                     display: 'flex',
-                    flexDirection: { xs: 'column', md: 'row' },
-                    gap: { xs: 2, md: 1 },
-                    alignItems: { xs: 'stretch', md: 'center' },
+                    flexDirection: 'row',
+                    flexWrap: 'nowrap',
+                    gap: 0.75,
+                    alignItems: 'center',
                     justifyContent: 'flex-end',
-                    width: { xs: '100%', md: 'auto' }
+                    flex: '0 0 auto',
                 }}
             >
                 <Tooltip title="날짜 초기화">
@@ -121,15 +146,16 @@ export default function HistoryActions({
                             setStartDate(null);
                             setEndDate(null);
                         }}
-                        size="medium"
+                        size="small"
+                        sx={{ width: 40, height: 40, flexShrink: 0 }}
                     >
                         <RefreshIcon />
                     </IconButton>
                 </Tooltip>
 
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 2 }, alignItems: 'stretch' }}>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' } }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 0.75, alignItems: 'center', flexShrink: 0 }}>
+                        <Box sx={{ display: 'flex', flexShrink: 0 }}>
                             <DatePicker
                                 label='시작일'
                                 value={startDate}
@@ -137,9 +163,8 @@ export default function HistoryActions({
                                 format="YYYY-MM-DD"
                                 slotProps={{
                                     textField: {
-                                        size: 'medium',
-                                        fullWidth: true,
-                                        sx: { minWidth: '120px' }
+                                        size: 'small',
+                                        sx: datePickerTextFieldSx,
                                     },
                                     openPickerButton: {
                                         sx: {
@@ -154,7 +179,7 @@ export default function HistoryActions({
                                 }}
                             />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' } }}>
+                        <Box sx={{ display: 'flex', flexShrink: 0 }}>
                             <DatePicker
                                 label='종료일'
                                 value={endDate}
@@ -168,9 +193,8 @@ export default function HistoryActions({
                                 format="YYYY-MM-DD"
                                 slotProps={{
                                     textField: {
-                                        size: 'medium',
-                                        fullWidth: true,
-                                        sx: { minWidth: '120px' }
+                                        size: 'small',
+                                        sx: datePickerTextFieldSx,
                                     },
                                     openPickerButton: {
                                         sx: {
@@ -192,8 +216,14 @@ export default function HistoryActions({
                     <Button
                         variant="contained"
                         startIcon={<AddIcon />}
-                        size="medium"
-                        sx={{ whiteSpace: 'nowrap' }}
+                        size="small"
+                        sx={{
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            minWidth: 104,
+                            height: 40,
+                            px: 1.5,
+                        }}
                         onClick={() => {
                             if (!serviceName) {
                                 setSnackbar({ open: true, message: '시스템을 먼저 선택하세요' });

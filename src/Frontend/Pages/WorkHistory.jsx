@@ -87,32 +87,33 @@ export default function WorkHistory() {
             .catch((err) => console.error(err));
     };
 
+    const isWithinDateRange = (date) => {
+        if (!date) {
+            return false;
+        }
+
+        const rowDate = dayjs(date);
+        const start = startDate ? startDate.startOf('day') : null;
+        const end = endDate ? endDate.endOf('day') : null;
+
+        const matchStart = !start || rowDate.isSame(start) || rowDate.isAfter(start);
+        const matchEnd = !end || rowDate.isSame(end) || rowDate.isBefore(end);
+
+        return matchStart && matchEnd;
+    };
+
     const filteredRows = rows.filter(row => {
         // 1. workType 필터
         const matchType = row.workType === filter;
 
         // 2. 날짜 필터 (visitDate 없으면 통과)
-        const rowDate = row.visitDate ? dayjs(row.visitDate) : null;
+        const matchDate = !row.visitDate || isWithinDateRange(row.visitDate);
 
-        const matchStart =
-            !startDate || (rowDate && rowDate.isAfter(startDate.subtract(1, 'day')));
-
-        const matchEnd =
-            !endDate || (rowDate && rowDate.isBefore(endDate.add(1, 'day')));
-
-        return matchType && matchStart && matchEnd;
+        return matchType && matchDate;
     });
 
     const filteredReportRows = reportRows.filter((row) => {
-        const rowDate = row.receivedAt ? dayjs(row.receivedAt) : null;
-
-        const matchStart =
-            !startDate || (rowDate && rowDate.isAfter(startDate.subtract(1, 'day')));
-
-        const matchEnd =
-            !endDate || (rowDate && rowDate.isBefore(endDate.add(1, 'day')));
-
-        return matchStart && matchEnd;
+        return isWithinDateRange(row.receivedAt);
     });
 
     useEffect(() => {
