@@ -218,16 +218,29 @@ public class InspectionReportService {
     }
 
     private String buildInspectionResult(JsonNode content, JsonNode cpu, JsonNode memory, JsonNode disk, JsonNode network, JsonNode software) {
-        String status = text(content, "status");
-        if (status.isBlank()) {
-            status = "info";
+        StringBuilder result = new StringBuilder();
+        appendAbnormalStatus(result, "CPU", text(cpu, "status"));
+        appendAbnormalStatus(result, "MEMORY", text(memory, "status"));
+        appendAbnormalStatus(result, "DISK", text(disk, "status"));
+        appendAbnormalStatus(result, "NETWORK", text(network, "status"));
+        if (!softwareNormal(software)) {
+            appendResultItem(result, "SERVICE 확인 필요");
         }
-        return "전체 상태: " + displayStatus(status)
-                + " / CPU: " + displayStatus(text(cpu, "status"))
-                + " / MEMORY: " + displayStatus(text(memory, "status"))
-                + " / DISK: " + displayStatus(text(disk, "status"))
-                + " / NETWORK: " + displayStatus(text(network, "status"))
-                + " / SERVICE: " + (softwareNormal(software) ? "정상" : "확인 필요");
+        return result.length() == 0 ? "전체 정상" : result.toString();
+    }
+
+    private void appendAbnormalStatus(StringBuilder result, String label, String status) {
+        if (status == null || status.isBlank() || "info".equalsIgnoreCase(status)) {
+            return;
+        }
+        appendResultItem(result, label + " " + displayStatus(status));
+    }
+
+    private void appendResultItem(StringBuilder result, String value) {
+        if (result.length() > 0) {
+            result.append(" / ");
+        }
+        result.append(value);
     }
 
     private boolean softwareNormal(JsonNode software) {
