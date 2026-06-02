@@ -8,6 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,10 @@ public class InspectionReportService {
 
     private static final String TEMPLATE_PATH = "templates/inspection_report.html";
     private static final String ASSET_BASE = "/api/inspectionreport/assets/";
+    private static final Pattern MT_PATTERN = Pattern.compile("M/T\\s*:\\s*([^\\r\\n]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SERIAL_PATTERN = Pattern.compile("S/N\\s*:\\s*([^\\r\\n]+?)(?:\\s+\\d+\\s*Core|$)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CORE_PATTERN = Pattern.compile("(\\d+)\\s*Core", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MEMORY_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*GB", Pattern.CASE_INSENSITIVE);
 
     private final InfoRepository infoRepository;
     private final DSystemRepository dSystemRepository;
@@ -92,21 +98,26 @@ public class InspectionReportService {
         long memoryAvailMb = readLong(memory, "avail_mb", 0L);
         long diskTotalK = readLong(disk, "total_k", 0L);
         long diskAvailK = readLong(disk, "avail_k", 0L);
+        String hardwareInfo = system == null ? "" : system.getHardwareInfo();
+        String parsedCpuCores = extract(hardwareInfo, CORE_PATTERN);
+        String parsedMemoryGb = extract(hardwareInfo, MEMORY_PATTERN);
+        String memoryTotalGb = memoryTotalMb > 0 ? mbToGb(memoryTotalMb) : parsedMemoryGb;
 
+        put(values, "reportTitleSystemName", system == null ? "서버" : firstText(system.getSystemName(), system.getSystemNameMin(), "서버"));
         put(values, "siteName", system == null ? "" : system.getCustomerName());
         put(values, "serviceName", system == null ? "" : system.getServiceName());
         put(values, "checker", system == null ? "" : system.getManager());
         put(values, "modelName", system == null ? "" : system.getHardwareName());
         put(values, "osVersion", system == null ? "" : firstText(system.getOsName(), system.getOsInfo()));
-        put(values, "mt", "");
-        put(values, "serialNumber", "");
+        put(values, "mt", extract(hardwareInfo, MT_PATTERN));
+        put(values, "serialNumber", extract(hardwareInfo, SERIAL_PATTERN));
 
-        put(values, "cpuCores", text(cpu, "cores"));
+        put(values, "cpuCores", firstText(text(cpu, "cores"), parsedCpuCores));
         put(values, "cpuProcess", "");
         put(values, "cpuUsePct", String.valueOf(cpuUse));
         put(values, "cpuIdlePct", String.valueOf(Math.max(0, 100 - cpuUse)));
 
-        put(values, "memoryTotalGb", mbToGb(memoryTotalMb));
+        put(values, "memoryTotalGb", memoryTotalGb);
         put(values, "memoryUsedGb", mbToGb(Math.max(0, memoryTotalMb - memoryAvailMb)));
         put(values, "memoryUsePct", text(memory, "last_pct"));
 
@@ -142,20 +153,68 @@ public class InspectionReportService {
 
     private String buildActionNote(JsonNode content) {
         JsonNode issues = child(content, "issues");
-        if (issues == null || !issues.isArray()) {
-            return "";
+        if (issues == null || !issues.isArray() || issues.isEmpty()) {
+            return "특이사항 없음";
         }
-        StringBuilder result = new StringBuilder();
+
+        Map<String, Integer> issueCounts = new LinkedHashMap<>();
         for (JsonNode issue : issues) {
-            String detail = firstText(text(issue, "detail"), text(issue, "message"), text(issue, "event_code"));
-            if (!detail.isBlank()) {
-                if (result.length() > 0) {
-                    result.append("\\n");
-                }
-                result.append(detail);
+            String key = firstText(
+                    text(issue, "event_code"),
+                    text(issue, "type"),
+                    text(issue, "category"),
+                    text(issue, "issuekey"),
+                    text(issue, "detail"),
+                    text(issue, "message")
+            );
+            if (!key.isBlank()) {
+                issueCounts.merge(key.trim(), 1, Integer::sum);
             }
         }
+
+        if (issueCounts.isEmpty()) {
+            return "특이사항 없음";
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (Map.Entry<String, Integer> entry : issueCounts.entrySet()) {
+            if (result.length() > 0) {
+                result.append("\n");
+            }
+            result.append("- ").append(displayIssueName(entry.getKey()));
+            if (entry.getValue() > 1) {
+                result.append(" ").append(entry.getValue()).append("건");
+            }
+            result.append(" 확인");
+        }
         return result.toString();
+    }
+
+    private String displayIssueName(String key) {
+        String normalized = key == null ? "" : key.trim();
+        String upper = normalized.toUpperCase();
+        if (upper.contains("CPU")) {
+            return "CPU 사용률 경고";
+        }
+        if (upper.contains("MEMORY") || upper.contains("MEM")) {
+            return "메모리 사용률 경고";
+        }
+        if (upper.contains("DISK") || upper.contains("FILESYSTEM") || upper.contains("FS")) {
+            return "디스크 사용률 경고";
+        }
+        if (upper.contains("NETWORK") || upper.contains("NET")) {
+            return "네트워크 상태 경고";
+        }
+        if (upper.contains("SERVICE")) {
+            return "서비스 상태 경고";
+        }
+        if (upper.contains("SWAP")) {
+            return "스왑 사용률 경고";
+        }
+        if (upper.contains("LOAD")) {
+            return "시스템 부하 경고";
+        }
+        return normalized;
     }
 
     private String buildInspectionResult(JsonNode content, JsonNode cpu, JsonNode memory, JsonNode disk, JsonNode network, JsonNode software) {
@@ -163,12 +222,12 @@ public class InspectionReportService {
         if (status.isBlank()) {
             status = "info";
         }
-        return "전체 상태: " + status
-                + " / CPU: " + text(cpu, "status")
-                + " / MEMORY: " + text(memory, "status")
-                + " / DISK: " + text(disk, "status")
-                + " / NETWORK: " + text(network, "status")
-                + " / SERVICE: " + (softwareNormal(software) ? "info" : "warn");
+        return "전체 상태: " + displayStatus(status)
+                + " / CPU: " + displayStatus(text(cpu, "status"))
+                + " / MEMORY: " + displayStatus(text(memory, "status"))
+                + " / DISK: " + displayStatus(text(disk, "status"))
+                + " / NETWORK: " + displayStatus(text(network, "status"))
+                + " / SERVICE: " + (softwareNormal(software) ? "정상" : "확인 필요");
     }
 
     private boolean softwareNormal(JsonNode software) {
@@ -197,7 +256,7 @@ public class InspectionReportService {
     private String applyValues(String template, Map<String, String> values) {
         String html = template;
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            html = html.replace("{{" + entry.getKey() + "}}", escapeHtml(entry.getValue()));
+            html = html.replace("{{" + entry.getKey() + "}}", formatReplacement(entry.getKey(), entry.getValue()));
         }
         return html.replaceAll("\\{\\{[A-Za-z0-9_]+}}", "");
     }
@@ -214,7 +273,9 @@ public class InspectionReportService {
         return html
                 .replace("href=\"점검서_style.css\"", "href=\"" + ASSET_BASE + "점검서_style.css\"")
                 .replace("href=\"점검서_custom.css\"", "href=\"" + ASSET_BASE + "점검서_custom.css\"")
-                .replace("url('점검서_hd1.png')", "url('" + ASSET_BASE + "점검서_hd1.png')");
+                .replace("url('점검서_hd1.png')", "url('" + ASSET_BASE + "점검서_hd1.png')")
+                .replace("윈도우 서버 정기점검 보고서", "{{reportTitleSystemName}} 정기점검 보고서")
+                .replace("</head>", inspectionReportStyle() + "</head>");
     }
 
     private JsonNode readJson(String value) {
@@ -298,6 +359,83 @@ public class InspectionReportService {
 
     private void put(Map<String, String> values, String key, String value) {
         values.put(key, value == null ? "" : value);
+    }
+
+    private String extract(String value, Pattern pattern) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        Matcher matcher = pattern.matcher(value);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private String displayStatus(String status) {
+        if (status == null || status.isBlank() || "info".equalsIgnoreCase(status)) {
+            return "정상";
+        }
+        if ("warn".equalsIgnoreCase(status)) {
+            return "주의";
+        }
+        if ("danger".equalsIgnoreCase(status)) {
+            return "위험";
+        }
+        return status;
+    }
+
+    private String formatReplacement(String key, String value) {
+        String escaped = escapeHtml(value);
+        if ("actionNote".equals(key)) {
+            return "<span class=\"inspection-report-note\">" + escaped.replace("\n", "<br>") + "</span>";
+        }
+        if ("inspectionResult".equals(key)) {
+            return "<span class=\"inspection-report-result\">" + escaped + "</span>";
+        }
+        if (isNumericValueKey(key)) {
+            return "<span class=\"inspection-report-number\">" + escaped + "</span>";
+        }
+        return escaped;
+    }
+
+    private boolean isNumericValueKey(String key) {
+        return key.endsWith("Pct")
+                || key.endsWith("Gb")
+                || key.endsWith("Cores")
+                || "cpuProcess".equals(key)
+                || "diskActivePct".equals(key);
+    }
+
+    private String inspectionReportStyle() {
+        return """
+                <style>
+                .inspection-report-number {
+                    font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+                    font-size: 9pt !important;
+                    font-weight: 400 !important;
+                    letter-spacing: -0.01em !important;
+                    line-height: 1.1 !important;
+                }
+                .inspection-report-note {
+                    display: inline-block;
+                    max-width: 111mm;
+                    font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+                    font-size: 8pt !important;
+                    font-weight: 400 !important;
+                    line-height: 1.45 !important;
+                    letter-spacing: -0.01em !important;
+                    white-space: normal !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: anywhere !important;
+                    text-align: left !important;
+                }
+                .inspection-report-result {
+                    font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+                    font-size: 8pt !important;
+                    font-weight: 400 !important;
+                    letter-spacing: -0.01em !important;
+                    line-height: 1.2 !important;
+                }
+                </style>
+                """;
     }
 
     private String firstText(String... values) {
