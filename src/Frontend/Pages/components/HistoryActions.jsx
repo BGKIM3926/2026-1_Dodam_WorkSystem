@@ -28,6 +28,10 @@ export default function HistoryActions({
     const chipSx = {
         flexShrink: 0,
     };
+    const datePickerSx = {
+        width: { xs: 148, md: 158, lg: 172, xl: 220 },
+        minWidth: { xs: 148, md: 158, lg: 172, xl: 220 },
+    };
 
     return (
         <>
@@ -138,7 +142,7 @@ export default function HistoryActions({
 
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                     <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' }, flexShrink: 0 }}>
+                        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                             <DatePicker
                                 label='시작일'
                                 value={startDate}
@@ -148,7 +152,7 @@ export default function HistoryActions({
                                     textField: {
                                         size: 'medium',
                                         fullWidth: true,
-                                        sx: { minWidth: '120px' }
+                                        sx: datePickerSx
                                     },
                                     openPickerButton: {
                                         sx: {
@@ -163,7 +167,7 @@ export default function HistoryActions({
                                 }}
                             />
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, minWidth: { xs: 'auto', sm: '130px' }, flexShrink: 0 }}>
+                        <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
                             <DatePicker
                                 label='종료일'
                                 value={endDate}
@@ -179,7 +183,7 @@ export default function HistoryActions({
                                     textField: {
                                         size: 'medium',
                                         fullWidth: true,
-                                        sx: { minWidth: '120px' }
+                                        sx: datePickerSx
                                     },
                                     openPickerButton: {
                                         sx: {
