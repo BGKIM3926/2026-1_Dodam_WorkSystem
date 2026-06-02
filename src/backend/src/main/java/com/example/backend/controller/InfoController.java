@@ -1,18 +1,23 @@
 package com.example.backend.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.backend.dto.InspectionReportInfoDto;
 import com.example.backend.dto.MailRequestDto;
 import com.example.backend.dto.MailResponseDto;
+import com.example.backend.service.InspectionReportInfoService;
 import com.example.backend.service.MailQueueService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,11 +30,22 @@ import tools.jackson.databind.ObjectMapper;
 public class InfoController {
 
     private final MailQueueService mailQueueService;
+    private final InspectionReportInfoService inspectionReportInfoService;
     private final ObjectMapper objectMapper;
 
-    public InfoController(MailQueueService mailQueueService, ObjectMapper objectMapper) {
+    public InfoController(
+            MailQueueService mailQueueService,
+            InspectionReportInfoService inspectionReportInfoService,
+            ObjectMapper objectMapper
+    ) {
         this.mailQueueService = mailQueueService;
+        this.inspectionReportInfoService = inspectionReportInfoService;
         this.objectMapper = objectMapper;
+    }
+
+    @GetMapping("/reports")
+    public List<InspectionReportInfoDto> getReportInfos(@RequestParam(required = false) Long serviceId) {
+        return inspectionReportInfoService.getReportInfos(serviceId);
     }
 
     @PostMapping

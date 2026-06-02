@@ -13,6 +13,7 @@ import HistoryList from './components/HistoryList';
 export default function WorkHistory() {
     const [rows, setRows] = useState([]);
     const [managerRows, setManagerRows] = useState([]);
+    const [reportRows, setReportRows] = useState([]);
     const { selectedNode, setSelectedNode } = useSelectedNode();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -31,6 +32,7 @@ export default function WorkHistory() {
         ? { customerName, serviceName }
         : null;
     const isGlobalView = !effectiveSelectedNode?.serviceName;
+    const isReportView = filter === '점검서 관리';
 
     const fetchRows = () => {
         if (!serviceName) {
@@ -73,6 +75,18 @@ export default function WorkHistory() {
             .catch((err) => console.error(err));
     };
 
+    const fetchReportRows = () => {
+        if (!serviceId) {
+            setReportRows([]);
+            return;
+        }
+
+        fetch(`/api/info/reports?serviceId=${serviceId}`)
+            .then((res) => res.json())
+            .then((data) => setReportRows(data))
+            .catch((err) => console.error(err));
+    };
+
     const filteredRows = rows.filter(row => {
         // 1. workType 필터
         const matchType = row.workType === filter;
@@ -87,6 +101,18 @@ export default function WorkHistory() {
             !endDate || (rowDate && rowDate.isBefore(endDate.add(1, 'day')));
 
         return matchType && matchStart && matchEnd;
+    });
+
+    const filteredReportRows = reportRows.filter((row) => {
+        const rowDate = row.receivedAt ? dayjs(row.receivedAt) : null;
+
+        const matchStart =
+            !startDate || (rowDate && rowDate.isAfter(startDate.subtract(1, 'day')));
+
+        const matchEnd =
+            !endDate || (rowDate && rowDate.isBefore(endDate.add(1, 'day')));
+
+        return matchStart && matchEnd;
     });
 
     useEffect(() => {
@@ -106,7 +132,7 @@ export default function WorkHistory() {
     }, [selectedNode?.customerName, selectedNode?.serviceName, customerNameFromQuery, serviceNameFromQuery, setSelectedNode]);
 
     useEffect(() => {
-        const availableFilters = ['정기점검', '장애조치', '기술지원', '구축', '기관정보'];
+        const availableFilters = ['정기점검', '장애조치', '기술지원', '구축', '기관정보', '점검서 관리'];
         if (workTypeFromQuery && availableFilters.includes(workTypeFromQuery)) {
             setFilter(workTypeFromQuery);
         }
@@ -142,6 +168,9 @@ export default function WorkHistory() {
         if (filter === '기관정보') {
             fetchManagers();
         }
+        if (filter === '점검서 관리') {
+            fetchReportRows();
+        }
     }, [filter, serviceId]);
 
     useEffect(() => {
@@ -159,7 +188,7 @@ export default function WorkHistory() {
                 component="main"
                 disableGutters
                 sx={{ display: 'flex', flexDirection: 'column', my: { xs: 10, md: 16 }, gap: 2, alignItems: 'stretch', px: { xs: 2, sm: 3, md: 4 } }}>
-                <HistoryHeader selectedNode={effectiveSelectedNode} rows={rows} />
+                <HistoryHeader selectedNode={effectiveSelectedNode} rows={isReportView ? filteredReportRows : rows} />
                 {isGlobalView ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: { xs: 220, md: 300 }, px: 1.5 }}>
                         <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
@@ -172,7 +201,7 @@ export default function WorkHistory() {
                             filter={filter} 
                             setFilter={setFilter} 
                             isGlobalView={isGlobalView} 
-                            canRegister={!isLegacyService}
+                            canRegister={!isLegacyService && !isReportView}
                             startDate={startDate}
                             setStartDate={setStartDate}
                             endDate={endDate}
@@ -180,9 +209,9 @@ export default function WorkHistory() {
                             selectedNode={effectiveSelectedNode}
                         />
                         <HistoryList 
-                            rows={filter === '기관정보' ? managerRows : filteredRows} 
+                            rows={isReportView ? filteredReportRows : filter === '기관정보' ? managerRows : filteredRows}
                             isGlobalView={isGlobalView} 
-                            onRefresh={filter === '기관정보' ? fetchManagers : fetchRows} 
+                            onRefresh={isReportView ? fetchReportRows : filter === '기관정보' ? fetchManagers : fetchRows}
                             filter={filter} 
                             targetHistoryId={historyIdFromQuery}
                         />

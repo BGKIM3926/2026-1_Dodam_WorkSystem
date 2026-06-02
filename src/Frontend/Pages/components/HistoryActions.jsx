@@ -96,6 +96,13 @@ export default function HistoryActions({
                     label="기관정보"
                     sx={{ flexShrink: 0 }}
                 />
+                <Chip
+                    onClick={() => setFilter('점검서 관리')}
+                    color={filter === '점검서 관리' ? 'primary' : 'default'}
+                    size="large"
+                    label="점검서 관리"
+                    sx={{ flexShrink: 0 }}
+                />
             </Box>
             
             <Box

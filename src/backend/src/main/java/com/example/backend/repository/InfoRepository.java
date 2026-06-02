@@ -12,4 +12,6 @@ public interface InfoRepository extends JpaRepository<Info, Long> {
     long countByTimeGreaterThanEqualAndTimeLessThan(LocalDateTime start, LocalDateTime end);
 
     List<Info> findByTimeGreaterThanEqualAndTimeLessThanOrderByTimeAsc(LocalDateTime start, LocalDateTime end);
+
+    List<Info> findAllByOrderByTimeDesc();
 }

@@ -33,6 +33,7 @@ const WORK_TYPE = {
     SUPPORT: '기술지원',
     CONSTRUCTION: '구축',
     MANAGER: '기관정보',
+    REPORT: '점검서 관리',
 };
 
 const textareaSx = {
@@ -378,6 +379,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
     const [editFiles, setEditFiles] = useState([]);
     const [retainedAttachments, setRetainedAttachments] = useState([]);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'warning' });
+    const [selectedReportIds, setSelectedReportIds] = useState([]);
     const lastOpenedTargetRef = useRef(null);
     const isMobile = useMediaQuery('(max-width:900px)');
     const today = dayjs().startOf('day');
@@ -390,6 +392,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
     const isSupportOrFaultView = !isGlobalView && (filter === WORK_TYPE.SUPPORT || filter === WORK_TYPE.FAULT);
     const isConstructionView = !isGlobalView && filter === WORK_TYPE.CONSTRUCTION;
     const isManagerView = !isGlobalView && filter === WORK_TYPE.MANAGER;
+    const isReportView = !isGlobalView && filter === WORK_TYPE.REPORT;
     const displayRows = useMemo(() => {
         if (!isManagerView) {
             return rows;
@@ -432,6 +435,43 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
         setOpenEdit(true);
     };
 
+    const normalizeReportSelection = (selection) => {
+        if (Array.isArray(selection)) {
+            return selection;
+        }
+        if (selection?.ids) {
+            return Array.from(selection.ids);
+        }
+        return [];
+    };
+
+    const handleGenerateReports = async (infoIds) => {
+        const ids = Array.isArray(infoIds) ? infoIds : [infoIds];
+        const validIds = ids.filter((id) => id !== undefined && id !== null);
+
+        if (validIds.length === 0) {
+            setSnackbar({ open: true, message: '점검서를 생성할 데이터를 선택해 주세요.', severity: 'warning' });
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/inspectionreport/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ infoIds: validIds }),
+            });
+
+            if (!response.ok) {
+                throw new Error('점검서 생성에 실패했습니다.');
+            }
+
+            setSnackbar({ open: true, message: '점검서 생성 요청이 완료되었습니다.', severity: 'success' });
+        } catch (error) {
+            console.error(error);
+            setSnackbar({ open: true, message: error.message || '점검서 생성에 실패했습니다.', severity: 'error' });
+        }
+    };
+
     const expandColumn = {
         field: 'expand',
         headerName: '',
@@ -462,6 +502,26 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                     <DeleteIcon fontSize="small" />
                 </IconButton>
             </Box>
+        ),
+    };
+
+    const reportActionColumn = {
+        field: 'actions',
+        headerName: '',
+        width: 120,
+        sortable: false,
+        filterable: false,
+        renderCell: (params) => (
+            <Button
+                size="small"
+                variant="contained"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleGenerateReports(params.row.id);
+                }}
+            >
+                생성
+            </Button>
         ),
     };
 
@@ -535,6 +595,18 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
         actionColumn,
     ];
 
+    const reportColumns = [
+        { field: 'systemName', headerName: '시스템', flex: 1, sortable: false },
+        {
+            field: 'receivedAt',
+            headerName: '수신일',
+            flex: 1,
+            sortable: false,
+            valueGetter: (value, row) => (row.receivedAt ? dayjs(row.receivedAt).format('YYYY-MM-DD HH:mm:ss') : '-'),
+        },
+        reportActionColumn,
+    ];
+
     const columns = isInspectionView
         ? inspectionColumns
         : isSupportOrFaultView
@@ -543,7 +615,9 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                 ? constructionColumns
                 : isManagerView
                     ? managerColumns
-                    : defaultColumns;
+                    : isReportView
+                        ? reportColumns
+                        : defaultColumns;
 
     const handleVisitDateChange = (newValue) => {
         if (newValue && newValue.startOf('day').isAfter(today)) {
@@ -653,11 +727,20 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                 <DataGrid
                     rows={displayRows}
                     columns={columns}
-                    getRowId={(row) => (isManagerView ? row.managerId : row.historyId)}
+                    getRowId={(row) => (isManagerView ? row.managerId : isReportView ? row.id : row.historyId)}
                     localeText={koKR.components.MuiDataGrid.defaultProps.localeText}
                     onRowClick={(params) => {
+                        if (isReportView) {
+                            return;
+                        }
                         setSelectedRow(params.row);
                         setOpenDetail(true);
+                    }}
+                    checkboxSelection={isReportView}
+                    onRowSelectionModelChange={(selection) => {
+                        if (isReportView) {
+                            setSelectedReportIds(normalizeReportSelection(selection));
+                        }
                     }}
                     initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
                     pageSizeOptions={[10, 20, 50]}
@@ -669,7 +752,7 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                     getRowClassName={(params) => (expandedRows[params.row.historyId] ? 'row-expanded' : '')}
                     sx={{
                         minWidth: {
-                            xs: isManagerView ? 760 : isInspectionView ? 520 : isGlobalView ? 760 : 900,
+                            xs: isManagerView ? 760 : isReportView ? 620 : isInspectionView ? 520 : isGlobalView ? 760 : 900,
                             md: 'auto',
                         },
                         '& .row-expanded': { backgroundColor: 'action.hover' },
@@ -686,7 +769,19 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                     }}
                 />
 
-                {!isManagerView && !isGlobalView && !isInspectionView && rows.map((row) => (
+                {isReportView && (
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                        <Button
+                            variant="contained"
+                            onClick={() => handleGenerateReports(selectedReportIds)}
+                            disabled={selectedReportIds.length === 0}
+                        >
+                            선택 점검서 생성
+                        </Button>
+                    </Box>
+                )}
+
+                {!isManagerView && !isGlobalView && !isInspectionView && !isReportView && rows.map((row) => (
                     <Collapse key={row.historyId} in={!!expandedRows[row.historyId]} timeout={300} unmountOnExit>
                         <Box sx={{ mt: 2, mb: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
                             <Box sx={{ px: 2, py: 1, backgroundColor: 'grey.100', display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
