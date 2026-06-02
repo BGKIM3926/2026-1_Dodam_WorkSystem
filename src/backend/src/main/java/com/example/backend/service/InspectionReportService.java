@@ -394,6 +394,9 @@ public class InspectionReportService {
         if ("inspectionResult".equals(key)) {
             return "<span class=\"inspection-report-result\">" + escaped + "</span>";
         }
+        if (key.matches("fs\\d+Name")) {
+            return "<span class=\"inspection-report-filesystem\">" + escaped + "</span>";
+        }
         if (isNumericValueKey(key)) {
             return "<span class=\"inspection-report-number\">" + escaped + "</span>";
         }
@@ -413,10 +416,33 @@ public class InspectionReportService {
                 <style>
                 .inspection-report-number {
                     font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
-                    font-size: 9pt !important;
+                    font-size: 8pt !important;
                     font-weight: 400 !important;
                     letter-spacing: -0.01em !important;
                     line-height: 1.1 !important;
+                }
+                .cs19 {
+                    font-size: 8pt !important;
+                    line-height: 1.1 !important;
+                }
+                .cs19 .inspection-report-number {
+                    font-size: inherit !important;
+                    line-height: inherit !important;
+                }
+                .inspection-report-filesystem {
+                    display: inline-block;
+                    width: 35mm;
+                    max-width: 35mm;
+                    font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
+                    font-size: 6.8pt !important;
+                    font-weight: 400 !important;
+                    line-height: 1.12 !important;
+                    letter-spacing: -0.02em !important;
+                    white-space: normal !important;
+                    word-break: break-all !important;
+                    overflow-wrap: anywhere !important;
+                    text-align: left !important;
+                    vertical-align: middle !important;
                 }
                 .inspection-report-note {
                     display: inline-block;
@@ -432,11 +458,19 @@ public class InspectionReportService {
                     text-align: left !important;
                 }
                 .inspection-report-result {
+                    display: inline-block;
+                    width: 111mm;
+                    max-width: 111mm;
                     font-family: "맑은 고딕", "Malgun Gothic", sans-serif !important;
                     font-size: 8pt !important;
                     font-weight: 400 !important;
                     letter-spacing: -0.01em !important;
-                    line-height: 1.2 !important;
+                    line-height: 1.25 !important;
+                    white-space: normal !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: anywhere !important;
+                    text-align: left !important;
+                    vertical-align: middle !important;
                 }
                 </style>
                 """;
