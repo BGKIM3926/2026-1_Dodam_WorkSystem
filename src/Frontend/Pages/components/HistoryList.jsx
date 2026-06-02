@@ -454,7 +454,37 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
             return;
         }
 
+        let preview = null;
+
         try {
+            preview = window.open('', '_blank');
+            if (!preview) {
+                throw new Error('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해 주세요.');
+            }
+
+            preview.document.open();
+            preview.document.write(`
+                <!doctype html>
+                <html lang="ko">
+                    <head>
+                        <meta charset="UTF-8" />
+                        <title>점검서 생성 중</title>
+                        <style>
+                            body {
+                                margin: 0;
+                                min-height: 100vh;
+                                display: grid;
+                                place-items: center;
+                                font-family: "맑은 고딕", "Malgun Gothic", sans-serif;
+                                color: #1f2937;
+                            }
+                        </style>
+                    </head>
+                    <body>점검서를 생성하는 중입니다...</body>
+                </html>
+            `);
+            preview.document.close();
+
             const response = await fetch('/api/inspectionreport/generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -466,10 +496,6 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
             }
 
             const html = await response.text();
-            const preview = window.open('', '_blank');
-            if (!preview) {
-                throw new Error('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해 주세요.');
-            }
             preview.document.open();
             preview.document.write(html);
             preview.document.close();
@@ -477,6 +503,9 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
             setSnackbar({ open: true, message: '점검서 미리보기를 열었습니다.', severity: 'success' });
         } catch (error) {
             console.error(error);
+            if (preview && !preview.closed) {
+                preview.close();
+            }
             setSnackbar({ open: true, message: error.message || '점검서 생성에 실패했습니다.', severity: 'error' });
         }
     };

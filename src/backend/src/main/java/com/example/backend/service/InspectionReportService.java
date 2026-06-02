@@ -54,7 +54,7 @@ public class InspectionReportService {
         }
 
         String template = readTemplate();
-        String normalizedTemplate = rewriteAssetPaths(template);
+        String normalizedTemplate = removeExportScript(rewriteAssetPaths(template));
 
         if (infoIds.size() == 1) {
             return renderOne(normalizedTemplate, infoIds.get(0));
@@ -278,6 +278,10 @@ public class InspectionReportService {
                 .replace("</head>", inspectionReportStyle() + "</head>");
     }
 
+    private String removeExportScript(String html) {
+        return html.replaceAll("(?is)<script\\b[^>]*>.*?</script>", "");
+    }
+
     private JsonNode readJson(String value) {
         try {
             return objectMapper.readTree(value);
@@ -457,11 +461,13 @@ public class InspectionReportService {
 
     private String extractBodyWithoutScript(String html) {
         int bodyStart = html.indexOf("<body>");
-        int scriptStart = html.indexOf("<script>", bodyStart);
-        if (bodyStart < 0 || scriptStart < 0) {
+        int bodyEnd = html.lastIndexOf("</body>");
+        if (bodyStart < 0 || bodyEnd < 0) {
             return html;
         }
-        return html.substring(bodyStart + "<body>".length(), scriptStart);
+        int scriptStart = html.indexOf("<script", bodyStart);
+        int contentEnd = scriptStart >= 0 && scriptStart < bodyEnd ? scriptStart : bodyEnd;
+        return html.substring(bodyStart + "<body>".length(), contentEnd);
     }
 
     private String extractPageContent(String html) {
@@ -470,12 +476,12 @@ public class InspectionReportService {
 
     private String replaceBody(String html, String bodyContent) {
         int bodyStart = html.indexOf("<body>");
-        int scriptStart = html.indexOf("<script>", bodyStart);
-        if (bodyStart < 0 || scriptStart < 0) {
+        int bodyEnd = html.lastIndexOf("</body>");
+        if (bodyStart < 0 || bodyEnd < 0) {
             return html;
         }
         return html.substring(0, bodyStart + "<body>".length())
                 + bodyContent
-                + html.substring(scriptStart);
+                + html.substring(bodyEnd);
     }
 }
