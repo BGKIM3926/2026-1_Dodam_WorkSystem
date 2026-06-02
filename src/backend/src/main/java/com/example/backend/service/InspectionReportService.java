@@ -1,0 +1,343 @@
+package com.example.backend.service;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.backend.entity.DSystem;
+import com.example.backend.entity.Info;
+import com.example.backend.repository.DSystemRepository;
+import com.example.backend.repository.InfoRepository;
+
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
+@Service
+public class InspectionReportService {
+
+    private static final String TEMPLATE_PATH = "templates/inspection_report.html";
+    private static final String ASSET_BASE = "/api/inspectionreport/assets/";
+
+    private final InfoRepository infoRepository;
+    private final DSystemRepository dSystemRepository;
+    private final ObjectMapper objectMapper;
+
+    public InspectionReportService(
+            InfoRepository infoRepository,
+            DSystemRepository dSystemRepository,
+            ObjectMapper objectMapper
+    ) {
+        this.infoRepository = infoRepository;
+        this.dSystemRepository = dSystemRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional(readOnly = true)
+    public String generateHtml(List<Long> infoIds) {
+        if (infoIds == null || infoIds.isEmpty()) {
+            throw new IllegalArgumentException("생성할 info를 선택해 주세요.");
+        }
+
+        String template = readTemplate();
+        String normalizedTemplate = rewriteAssetPaths(template);
+
+        if (infoIds.size() == 1) {
+            return renderOne(normalizedTemplate, infoIds.get(0));
+        }
+
+        String first = renderOne(normalizedTemplate, infoIds.get(0));
+        StringBuilder pages = new StringBuilder(extractBodyWithoutScript(first));
+        for (int i = 1; i < infoIds.size(); i++) {
+            pages.append(extractPageContent(renderOne(normalizedTemplate, infoIds.get(i))));
+        }
+        return replaceBody(first, pages.toString());
+    }
+
+    private String renderOne(String template, Long infoId) {
+        Info info = infoRepository.findById(infoId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 info입니다: " + infoId));
+        JsonNode root = readJson(info.getBodyRawJson());
+        JsonNode content = content(root);
+        Long systemId = readLong(root, "system_id", "systemId", "dsystem_id", "dsystemId");
+        DSystem system = systemId == null
+                ? null
+                : dSystemRepository.findById(systemId).orElse(null);
+
+        return applyValues(template, buildValues(system, content));
+    }
+
+    private Map<String, String> buildValues(DSystem system, JsonNode content) {
+        Map<String, String> values = new LinkedHashMap<>();
+        JsonNode resources = child(content, "resources");
+        JsonNode cpu = child(resources, "cpu");
+        JsonNode memory = child(resources, "memory");
+        JsonNode disk = child(resources, "disk");
+        JsonNode network = child(resources, "network");
+        JsonNode software = child(content, "software");
+        JsonNode filesystems = child(disk, "filesystems");
+        JsonNode fs1 = arrayItem(filesystems, 0);
+        JsonNode fs2 = arrayItem(filesystems, 1);
+
+        int cpuUse = readInt(cpu, "last_pct", 0);
+        long memoryTotalMb = readLong(memory, "total_mb", 0L);
+        long memoryAvailMb = readLong(memory, "avail_mb", 0L);
+        long diskTotalK = readLong(disk, "total_k", 0L);
+        long diskAvailK = readLong(disk, "avail_k", 0L);
+
+        put(values, "siteName", system == null ? "" : system.getCustomerName());
+        put(values, "serviceName", system == null ? "" : system.getServiceName());
+        put(values, "checker", system == null ? "" : system.getManager());
+        put(values, "modelName", system == null ? "" : system.getHardwareName());
+        put(values, "osVersion", system == null ? "" : firstText(system.getOsName(), system.getOsInfo()));
+        put(values, "mt", "");
+        put(values, "serialNumber", "");
+
+        put(values, "cpuCores", text(cpu, "cores"));
+        put(values, "cpuProcess", "");
+        put(values, "cpuUsePct", String.valueOf(cpuUse));
+        put(values, "cpuIdlePct", String.valueOf(Math.max(0, 100 - cpuUse)));
+
+        put(values, "memoryTotalGb", mbToGb(memoryTotalMb));
+        put(values, "memoryUsedGb", mbToGb(Math.max(0, memoryTotalMb - memoryAvailMb)));
+        put(values, "memoryUsePct", text(memory, "last_pct"));
+
+        put(values, "diskActivePct", text(disk, "last_pct"));
+        put(values, "diskTotalGb", kbToGb(diskTotalK));
+        put(values, "diskAvailGb", kbToGb(diskAvailK));
+        put(values, "diskUsePct", text(disk, "last_pct"));
+        put(values, "dataDiskStatus", readInt(disk, "max_pct", 0) >= 80 ? "80% 이상" : "");
+
+        fillFilesystem(values, "fs1", fs1);
+        fillFilesystem(values, "fs2", fs2);
+
+        putChecks(values, "hw", true);
+        putChecks(values, "cpu", isNormal(cpu));
+        putChecks(values, "memory", isNormal(memory));
+        putChecks(values, "disk", isNormal(disk));
+        putChecks(values, "service", softwareNormal(software));
+        putChecks(values, "network", isNormal(network));
+
+        put(values, "actionNote", buildActionNote(content));
+        put(values, "inspectionResult", buildInspectionResult(content, cpu, memory, disk, network, software));
+
+        return values;
+    }
+
+    private void fillFilesystem(Map<String, String> values, String prefix, JsonNode fs) {
+        put(values, prefix + "Mount", text(fs, "mount"));
+        put(values, prefix + "Name", text(fs, "fs"));
+        put(values, prefix + "SizeGb", kbToGb(readLong(fs, "total_k", 0L)));
+        put(values, prefix + "AvailGb", kbToGb(readLong(fs, "avail_k", 0L)));
+        put(values, prefix + "UsePct", text(fs, "used_pct"));
+    }
+
+    private String buildActionNote(JsonNode content) {
+        JsonNode issues = child(content, "issues");
+        if (issues == null || !issues.isArray()) {
+            return "";
+        }
+        StringBuilder result = new StringBuilder();
+        for (JsonNode issue : issues) {
+            String detail = firstText(text(issue, "detail"), text(issue, "message"), text(issue, "event_code"));
+            if (!detail.isBlank()) {
+                if (result.length() > 0) {
+                    result.append("\\n");
+                }
+                result.append(detail);
+            }
+        }
+        return result.toString();
+    }
+
+    private String buildInspectionResult(JsonNode content, JsonNode cpu, JsonNode memory, JsonNode disk, JsonNode network, JsonNode software) {
+        String status = text(content, "status");
+        if (status.isBlank()) {
+            status = "info";
+        }
+        return "전체 상태: " + status
+                + " / CPU: " + text(cpu, "status")
+                + " / MEMORY: " + text(memory, "status")
+                + " / DISK: " + text(disk, "status")
+                + " / NETWORK: " + text(network, "status")
+                + " / SERVICE: " + (softwareNormal(software) ? "info" : "warn");
+    }
+
+    private boolean softwareNormal(JsonNode software) {
+        if (software == null || software.isNull()) {
+            return true;
+        }
+        for (JsonNode item : software) {
+            String state = text(item, "state");
+            if (!state.isBlank() && !"running".equalsIgnoreCase(state)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isNormal(JsonNode node) {
+        String status = text(node, "status");
+        return status.isBlank() || "info".equalsIgnoreCase(status);
+    }
+
+    private void putChecks(Map<String, String> values, String prefix, boolean normal) {
+        put(values, prefix + "NormalCheck", normal ? "☑" : "□");
+        put(values, prefix + "EtcCheck", normal ? "□" : "☑");
+    }
+
+    private String applyValues(String template, Map<String, String> values) {
+        String html = template;
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            html = html.replace("{{" + entry.getKey() + "}}", escapeHtml(entry.getValue()));
+        }
+        return html.replaceAll("\\{\\{[A-Za-z0-9_]+}}", "");
+    }
+
+    private String readTemplate() {
+        try {
+            return new String(new ClassPathResource(TEMPLATE_PATH).getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException("점검서 템플릿을 읽을 수 없습니다.", e);
+        }
+    }
+
+    private String rewriteAssetPaths(String html) {
+        return html
+                .replace("href=\"점검서_style.css\"", "href=\"" + ASSET_BASE + "점검서_style.css\"")
+                .replace("href=\"점검서_custom.css\"", "href=\"" + ASSET_BASE + "점검서_custom.css\"")
+                .replace("url('점검서_hd1.png')", "url('" + ASSET_BASE + "점검서_hd1.png')");
+    }
+
+    private JsonNode readJson(String value) {
+        try {
+            return objectMapper.readTree(value);
+        } catch (Exception e) {
+            throw new IllegalStateException("info JSON을 읽을 수 없습니다.");
+        }
+    }
+
+    private JsonNode content(JsonNode root) {
+        JsonNode content = child(root, "content");
+        return content == null || content.isNull() ? root : content;
+    }
+
+    private JsonNode child(JsonNode node, String field) {
+        return node == null || node.isNull() ? null : node.get(field);
+    }
+
+    private JsonNode arrayItem(JsonNode node, int index) {
+        return node != null && node.isArray() && node.size() > index ? node.get(index) : null;
+    }
+
+    private String text(JsonNode node, String field) {
+        JsonNode value = child(node, field);
+        return value == null || value.isNull() ? "" : value.asString();
+    }
+
+    private Long readLong(JsonNode node, String... fields) {
+        for (String field : fields) {
+            JsonNode value = child(node, field);
+            if (value == null || value.isNull()) {
+                continue;
+            }
+            try {
+                return Long.parseLong(value.asString());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private long readLong(JsonNode node, String field, long defaultValue) {
+        String value = text(node, field);
+        if (value.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private int readInt(JsonNode node, String field, int defaultValue) {
+        String value = text(node, field);
+        if (value.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private String mbToGb(long mb) {
+        return decimal(BigDecimal.valueOf(mb).divide(BigDecimal.valueOf(1024), 2, RoundingMode.HALF_UP));
+    }
+
+    private String kbToGb(long kb) {
+        return decimal(BigDecimal.valueOf(kb).divide(BigDecimal.valueOf(1024 * 1024), 2, RoundingMode.HALF_UP));
+    }
+
+    private String decimal(BigDecimal value) {
+        if (value.compareTo(BigDecimal.ZERO) == 0) {
+            return "";
+        }
+        return value.stripTrailingZeros().toPlainString();
+    }
+
+    private void put(Map<String, String> values, String key, String value) {
+        values.put(key, value == null ? "" : value);
+    }
+
+    private String firstText(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String escapeHtml(String value) {
+        return value == null ? "" : value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
+    }
+
+    private String extractBodyWithoutScript(String html) {
+        int bodyStart = html.indexOf("<body>");
+        int scriptStart = html.indexOf("<script>", bodyStart);
+        if (bodyStart < 0 || scriptStart < 0) {
+            return html;
+        }
+        return html.substring(bodyStart + "<body>".length(), scriptStart);
+    }
+
+    private String extractPageContent(String html) {
+        return extractBodyWithoutScript(html);
+    }
+
+    private String replaceBody(String html, String bodyContent) {
+        int bodyStart = html.indexOf("<body>");
+        int scriptStart = html.indexOf("<script>", bodyStart);
+        if (bodyStart < 0 || scriptStart < 0) {
+            return html;
+        }
+        return html.substring(0, bodyStart + "<body>".length())
+                + bodyContent
+                + html.substring(scriptStart);
+    }
+}

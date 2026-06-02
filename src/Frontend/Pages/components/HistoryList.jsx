@@ -465,7 +465,16 @@ export default function HistoryList({ rows, isGlobalView, onRefresh, filter, tar
                 throw new Error('점검서 생성에 실패했습니다.');
             }
 
-            setSnackbar({ open: true, message: '점검서 생성 요청이 완료되었습니다.', severity: 'success' });
+            const html = await response.text();
+            const preview = window.open('', '_blank');
+            if (!preview) {
+                throw new Error('팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도해 주세요.');
+            }
+            preview.document.open();
+            preview.document.write(html);
+            preview.document.close();
+
+            setSnackbar({ open: true, message: '점검서 미리보기를 열었습니다.', severity: 'success' });
         } catch (error) {
             console.error(error);
             setSnackbar({ open: true, message: error.message || '점검서 생성에 실패했습니다.', severity: 'error' });
