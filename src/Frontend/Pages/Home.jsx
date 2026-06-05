@@ -50,9 +50,12 @@ export default function Home() {
     const [missingInspections, setMissingInspections] = useState([]);
     const [siteOptions, setSiteOptions] = useState([]);
     const [selectedSite, setSelectedSite] = useState('');
+    const [selectedRecentSite, setSelectedRecentSite] = useState('');
     const [recentHistory, setRecentHistory] = useState([]);
     const [inspectionPage, setInspectionPage] = useState(1);
+    const [recentPage, setRecentPage] = useState(1);
     const inspectionRowsPerPage = 10;
+    const recentRowsPerPage = 10;
     const navigate = useNavigate();
     const { setSelectedNode } = useSelectedNode();
 
@@ -76,11 +79,20 @@ export default function Home() {
             })
             .catch(console.error);
 
-        fetch('/api/stats/recent')
+    }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams();
+        if (selectedRecentSite) {
+            params.set('site', selectedRecentSite);
+        }
+
+        const queryString = params.toString();
+        fetch(`/api/stats/recent${queryString ? `?${queryString}` : ''}`)
             .then((res) => res.json())
             .then((data) => setRecentHistory(data))
             .catch(console.error);
-    }, []);
+    }, [selectedRecentSite]);
 
     const filteredMissingInspections = selectedSite
         ? missingInspections.filter((row) => row.region === selectedSite)
@@ -93,6 +105,11 @@ export default function Home() {
     
 
     const inspectionPageCount = Math.ceil(filteredMissingInspections.length / inspectionRowsPerPage);
+    const pagedRecentHistory = recentHistory.slice(
+        (recentPage - 1) * recentRowsPerPage,
+        recentPage * recentRowsPerPage,
+    );
+    const recentPageCount = Math.ceil(recentHistory.length / recentRowsPerPage);
 
     const handleMissingInspectionRowClick = (row) => {
         const customerName = row.region;
@@ -136,6 +153,11 @@ export default function Home() {
     const handleSiteChange = (event) => {
         setSelectedSite(event.target.value);
         setInspectionPage(1);
+    };
+
+    const handleRecentSiteChange = (event) => {
+        setSelectedRecentSite(event.target.value);
+        setRecentPage(1);
     };
 
     const statCards = [
@@ -312,55 +334,91 @@ export default function Home() {
 
             <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
-                    <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                            최근 등록 이력
-                        </Typography>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: 1,
+                            px: { xs: 2, md: 3 },
+                            py: 2,
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                                최근 등록 이력
+                            </Typography>
+                        </Box>
+                        <Box sx={{ ml: { xs: 0, sm: 'auto' }, minWidth: { xs: '100%', sm: 220 } }}>
+                            <FormControl size="small" fullWidth>
+                                <Select value={selectedRecentSite} displayEmpty onChange={handleRecentSiteChange}>
+                                    <MenuItem value="">전체 사이트</MenuItem>
+                                    {siteOptions.map((site) => (
+                                        <MenuItem key={site} value={site}>
+                                            {site}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                     </Box>
                     <Divider />
                     {recentHistory.length > 0 ? (
-                        <List disablePadding>
-                            {recentHistory.map((item, idx) => (
-                                <ListItem
-                                    key={item.historyId}
-                                    divider={idx < recentHistory.length - 1}
-                                    onClick={() => handleRecentHistoryRowClick(item)}
-                                    sx={{
-                                        px: { xs: 2, md: 3 },
-                                        py: 1.5,
-                                        alignItems: 'center',
-                                        cursor: item.region && item.serviceName && item.workType ? 'pointer' : 'default',
-                                        '&:hover': { backgroundColor: 'action.hover' },
-                                    }}
-                                >
-                                    <ListItemIcon sx={{ minWidth: 36, mr: 1 }}>
-                                        {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}
-                                    </ListItemIcon>
-                                    <ListItemText
-                                        primary={(
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Chip
-                                                    label={item.workType}
-                                                    size="small"
-                                                    color={workTypeColor[item.workType] || 'default'}
-                                                    sx={{ fontWeight: 600, minWidth: 64 }}
-                                                />
-                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                    {item.issue || '(내용 없음)'}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                        secondary={(
-                                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                                <Typography variant="caption">{item.region || ''}</Typography>
-                                                <Typography variant="caption">/ {item.serviceName || ''}</Typography>
-                                                <Typography variant="caption">· {item.visitDate || ''}</Typography>
-                                            </Box>
-                                        )}
+                        <>
+                            <List disablePadding>
+                                {pagedRecentHistory.map((item, idx) => (
+                                    <ListItem
+                                        key={item.historyId}
+                                        divider={idx < pagedRecentHistory.length - 1}
+                                        onClick={() => handleRecentHistoryRowClick(item)}
+                                        sx={{
+                                            px: { xs: 2, md: 3 },
+                                            py: 1.5,
+                                            alignItems: 'center',
+                                            cursor: item.region && item.serviceName && item.workType ? 'pointer' : 'default',
+                                            '&:hover': { backgroundColor: 'action.hover' },
+                                        }}
+                                    >
+                                        <ListItemIcon sx={{ minWidth: 36, mr: 1 }}>
+                                            {workTypeIcon[item.workType] || <AssignmentIcon fontSize="small" />}
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={(
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Chip
+                                                        label={item.workType}
+                                                        size="small"
+                                                        color={workTypeColor[item.workType] || 'default'}
+                                                        sx={{ fontWeight: 600, minWidth: 64 }}
+                                                    />
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                        {item.issue || '(내용 없음)'}
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                            secondary={(
+                                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                                    <Typography variant="caption">{item.region || ''}</Typography>
+                                                    <Typography variant="caption">/ {item.serviceName || ''}</Typography>
+                                                    <Typography variant="caption">· {item.visitDate || ''}</Typography>
+                                                </Box>
+                                            )}
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
+                            {recentPageCount > 1 && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                    <Pagination
+                                        count={recentPageCount}
+                                        page={recentPage}
+                                        onChange={(event, page) => setRecentPage(page)}
+                                        color="primary"
+                                        size="small"
                                     />
-                                </ListItem>
-                            ))}
-                        </List>
+                                </Box>
+                            )}
+                        </>
                     ) : (
                         <Box sx={{ px: 3, py: 4, textAlign: 'center' }}>
                             <Typography color="text.secondary">등록된 이력이 없습니다.</Typography>

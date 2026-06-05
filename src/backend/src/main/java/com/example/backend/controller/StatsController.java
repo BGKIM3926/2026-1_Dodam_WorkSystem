@@ -32,7 +32,9 @@ public class StatsController {
     }
 
     @GetMapping("/recent")
-    public List<Map<String, Object>> getRecentHistory(@RequestParam(required = false) String workerId) {
-        return statsService.getRecentHistory(workerId);
+    public List<Map<String, Object>> getRecentHistory(
+            @RequestParam(required = false) String workerId,
+            @RequestParam(required = false) String site) {
+        return statsService.getRecentHistory(workerId, site);
     }
 }

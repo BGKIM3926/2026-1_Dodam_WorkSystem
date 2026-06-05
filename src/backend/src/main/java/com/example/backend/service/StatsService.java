@@ -130,14 +130,23 @@ public class StatsService {
         return result;
     }
 
-    public List<Map<String, Object>> getRecentHistory(String workerId) {
+    public List<Map<String, Object>> getRecentHistory(String workerId, String site) {
         StringBuilder jpql = new StringBuilder(
                 "SELECT m.historyId, m.workType, m.issue, m.region, " +
                         "COALESCE(d.serviceNameMin, m.serviceName), m.visitDate " +
                         "FROM MaintenanceHistory m LEFT JOIN DSystem d ON m.systemId = d.systemId ");
 
+        List<String> conditions = new ArrayList<>();
         if (hasWorkerId(workerId)) {
-            jpql.append("WHERE m.workerId = :workerId ");
+            conditions.add("m.workerId = :workerId");
+        }
+        if (site != null && !site.isBlank()) {
+            conditions.add("m.region = :site");
+        }
+        if (!conditions.isEmpty()) {
+            jpql.append("WHERE ");
+            jpql.append(String.join(" AND ", conditions));
+            jpql.append(" ");
         }
 
         jpql.append("ORDER BY m.visitDate DESC, m.historyId DESC");
@@ -146,9 +155,12 @@ public class StatsService {
         if (hasWorkerId(workerId)) {
             query.setParameter("workerId", workerId);
         }
+        if (site != null && !site.isBlank()) {
+            query.setParameter("site", site);
+        }
 
         @SuppressWarnings("unchecked")
-        List<Object[]> rows = query.setMaxResults(10).getResultList();
+        List<Object[]> rows = query.setMaxResults(50).getResultList();
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] row : rows) {
