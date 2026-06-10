@@ -42,12 +42,16 @@
         }
     });
 
+    const sortByName = (a, b) => a.name.localeCompare(b.name, 'ko');
+
     const toNodeArray = (root) => ({
         ...root,
-        children: Object.values(root.children).map((customerNode) => ({
-            ...customerNode,
-            children: Object.values(customerNode.children),
-        })),
+        children: Object.values(root.children)
+            .sort(sortByName)
+            .map((customerNode) => ({
+                ...customerNode,
+                children: Object.values(customerNode.children).sort(sortByName),
+            })),
     });
 
     return [toNodeArray(roots.active), toNodeArray(roots.closed)];
