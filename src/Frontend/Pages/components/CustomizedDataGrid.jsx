@@ -150,7 +150,8 @@ export default function CustomizedDataGrid() {
     mb: 0.75,
   };
 
-  const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))];
+  const customerList = [...new Set(rows.map((r) => r.customerName).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ko'));
 
   const filteredRows = rows.filter((row) => {
     const matchCustomer = !customerFilter || row.customerName === customerFilter;
