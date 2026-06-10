@@ -43,7 +43,9 @@ public class DSystemBulkSyncService {
 
     private static final List<String> DSYSTEM_COMPARE_FIELDS = List.of(
             "customerName", "serviceName", "serviceNameMin", "systemName", "systemNameMin",
-            "hardwareName", "hardwareInfo", "osName", "osIp", "osInfo", "serviceId", "version", "manager");
+            "hardwareName", "hardwareInfo", "osName", "osIp", "osInfo", "status", "serviceId", "version", "manager");
+
+    private static final Set<String> VALID_SYSTEM_STATUSES = Set.of("SAFE", "WARNING", "DANGER");
 
     private static final List<String> ACCOUNT_COMPARE_FIELDS = List.of(
             "systemId", "systemType", "accessType", "portNumber", "accountId", "accountPw");
@@ -125,6 +127,7 @@ public class DSystemBulkSyncService {
             entity.setOsName(row.osName());
             entity.setOsIp(row.osIp());
             entity.setOsInfo(row.osInfo());
+            entity.setStatus(defaultStatus(row.status()));
             entity.setServiceId(row.serviceId());
             entity.setVersion(defaultVersion(row.version()));
             entity.setManager(defaultManager(row.manager()));
@@ -344,6 +347,7 @@ public class DSystemBulkSyncService {
                     nullable(row.get("osName")),
                     nullable(row.get("osIp")),
                     nullable(row.get("osInfo")),
+                    defaultStatus(row.get("status")),
                     serviceId,
                     defaultVersion(row.get("version")),
                     defaultManager(row.get("manager"))));
@@ -464,6 +468,7 @@ public class DSystemBulkSyncService {
         aliases.put("osName", aliases("osname", "os_name", "os명"));
         aliases.put("osIp", aliases("osip", "os_ip", "ip", "osip주소"));
         aliases.put("osInfo", aliases("osinfo", "os_info", "os정보"));
+        aliases.put("status", aliases("status", "상태"));
         aliases.put("serviceId", aliases("serviceid", "service_id"));
         aliases.put("version", aliases("version", "버전"));
         aliases.put("manager", aliases("manager", "담당자"));
@@ -500,6 +505,7 @@ public class DSystemBulkSyncService {
         values.put("osName", safe(entity.getOsName()));
         values.put("osIp", safe(entity.getOsIp()));
         values.put("osInfo", safe(entity.getOsInfo()));
+        values.put("status", safe(defaultStatus(entity.getStatus())));
         values.put("serviceId", safe(entity.getServiceId()));
         values.put("version", safe(defaultVersion(entity.getVersion())));
         values.put("manager", safe(defaultManager(entity.getManager())));
@@ -519,6 +525,7 @@ public class DSystemBulkSyncService {
         values.put("osName", safe(row.osName()));
         values.put("osIp", safe(row.osIp()));
         values.put("osInfo", safe(row.osInfo()));
+        values.put("status", safe(defaultStatus(row.status())));
         values.put("serviceId", safe(row.serviceId()));
         values.put("version", safe(defaultVersion(row.version())));
         values.put("manager", safe(defaultManager(row.manager())));
@@ -580,6 +587,19 @@ public class DSystemBulkSyncService {
         return version;
     }
 
+    private String defaultStatus(String value) {
+        String status = nullable(value);
+        if (status == null) {
+            return "SAFE";
+        }
+
+        String normalizedStatus = status.toUpperCase(Locale.ROOT);
+        if (!VALID_SYSTEM_STATUSES.contains(normalizedStatus)) {
+            throw new IllegalArgumentException("status 값은 SAFE, WARNING, DANGER 중 하나여야 합니다.");
+        }
+        return normalizedStatus;
+    }
+
     private String defaultManager(String value) {
         String manager = nullable(value);
         if (manager == null) {
@@ -623,6 +643,7 @@ public class DSystemBulkSyncService {
             String osName,
             String osIp,
             String osInfo,
+            String status,
             Long serviceId,
             String version,
             String manager
