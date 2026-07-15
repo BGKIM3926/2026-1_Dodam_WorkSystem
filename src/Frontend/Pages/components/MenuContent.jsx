@@ -140,8 +140,8 @@ export default function MenuContent({ treeData, mobileOnly = false }) {
       )}
 
       <Box
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+        /* onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)} */
       >
           <ListItemButton
             selected={location.pathname.includes('workhistory')}
